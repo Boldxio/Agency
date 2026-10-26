@@ -1,0 +1,3611 @@
+<!DOCTYPE html>
+<!--
+  ===========================================================================
+  BOLDX.IO — single-file marketing landing page
+  ===========================================================================
+
+  WHAT THIS FILE IS
+  One self-contained HTML page: markup, styles and behaviour all live here.
+  Only three things load from the internet (Tailwind, Lucide icons and the
+  Carlito webfont); everything else is in this file.
+
+  HOW IT IS ORGANISED — search for these banners to jump around:
+      1  HEAD .............. meta tags, external libraries, Tailwind config
+      2  DESIGN TOKENS ..... the colour variables both themes read from
+      3  BASE + COMPONENTS . buttons, cards, fields, reels, FAQ, marquee
+      4  MOTION LAYER ...... scroll reveals, hovers, custom cursor, phone art
+      5  REDUCED MOTION .... the accessibility opt-out
+      6  POLISH + RESPONSIVE fluid type and the per-screen-size rules
+      7  MARKUP ............ the page content, section by section
+      8  SCRIPT ............ all behaviour, each block commented
+
+  EDITING IT LATER
+  - Colours: edit the variables under DESIGN TOKENS. Nothing hard-codes a
+    colour, so changing --accent in two places restyles the entire page.
+  - Text: edit it directly in the MARKUP section.
+  - Contact address: the EMAIL constant at the top of the SCRIPT section.
+
+  A NOTE ON "DUPLICATE" CSS RULES
+  Several selectors (.card, .btn, .reveal, .eyebrow, #ring, .chip) are
+  declared more than once, in different sections. That is deliberate, not an
+  oversight: the later block refines the earlier one, and CSS applies the
+  last matching rule. Each one is flagged with an "OVERRIDE" comment. Do not
+  merge them — doing so changes which value wins and will alter the design.
+  ===========================================================================
+-->
+<html lang="en" data-theme="dark">
+
+<head>
+
+  <!-- ===================================================================
+       1. HEAD
+       =================================================================== -->
+
+  <meta charset="UTF-8" />
+
+  <!-- Tells phones to use their real width instead of pretending to be a
+       980px desktop. Without this the whole page renders zoomed out.
+       No maximum-scale, so visitors can still pinch to zoom. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Browser tab title and the grey line shown under the link in Google. -->
+  <title>Boldx.io — Sharp edits. Clear strategy. Consistent content.</title>
+  <meta name="description" content="Boldx.io turns raw footage into polished short-form videos and builds the content strategy behind them. 850M+ views generated, 67+ brands served." />
+
+  <!-- Tailwind CSS, loaded from a CDN. It compiles the utility classes
+       (grid, p-8, text-xl, …) in the visitor's browser at page load. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide icon library. Every <i data-lucide="name"> in the markup below
+       is swapped for an SVG when lucide.createIcons() runs in the script. -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Carlito: a metric-compatible stand-in for Calibri. Windows machines
+       already have Calibri; this covers everyone else. preconnect opens the
+       connection early so the font arrives sooner. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Points Tailwind's own font utilities at the same stack the body uses,
+       so a Tailwind class and our CSS never disagree about the typeface. -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Calibri', 'Carlito', 'Segoe UI', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+
+  /* =====================================================================
+     2. DESIGN TOKENS
+     Every colour and shadow on the page comes from these variables, so the
+     light/dark switch is just a different set of values. The script flips
+     data-theme on <html>, and the whole page re-colours itself.
+     ===================================================================== */
+
+  :root,
+  [data-theme="dark"] {
+    --bg:          #0b0b0c;                  /* page background            */
+    --bg2:         #121214;                  /* alternating section bands  */
+    --card:        rgba(255,255,255,.04);    /* card / input surface       */
+    --card-hover:  rgba(255,255,255,.07);    /* same, on hover             */
+    --line:        rgba(255,255,255,.10);    /* hairline borders           */
+    --text:        #f6f4f1;                  /* body copy                  */
+    --muted:       #a3a09b;                  /* secondary copy             */
+    --accent:      #FA4616;                  /* brand orange               */
+    --accent-ink:  #fff;                     /* text drawn ON the accent   */
+    --glass:       rgba(11,11,12,.65);       /* frosted panels (nav, form) */
+    --shadow:      0 30px 80px -30px rgba(250,70,22,.35); /* orange glow   */
+
+    /* ---- Motion tokens ----
+       One easing and duration scale for the whole page. Mixed, arbitrary
+       curves are what make a site feel assembled rather than designed, so
+       components reference these rather than inventing their own.
+         --ease        decisive: fast out of the gate, long settle
+         --ease-soft   gentler, for opacity and colour
+         --ease-spring overshoots slightly, for anything tactile */
+    --ease:        cubic-bezier(.2, .8, .2, 1);
+    --ease-soft:   cubic-bezier(.33, 1, .68, 1);
+    --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+    --dur-1:       .18s;   /* state flicks: press, hover colour     */
+    --dur-2:       .32s;   /* small moves: icons, chips             */
+    --dur-3:       .55s;   /* panels, indicators                    */
+    --dur-4:       .9s;    /* entrances                             */
+  }
+
+  /* Light theme. Same variable names, different values — nothing else in
+     the stylesheet needs to know which theme is active. The accent is
+     slightly darkened here so it still passes contrast on a pale page. */
+  [data-theme="light"] {
+    --bg:          #faf8f5;
+    --bg2:         #f1ede7;
+    --card:        rgba(0,0,0,.03);
+    --card-hover:  rgba(0,0,0,.06);
+    --line:        rgba(0,0,0,.10);
+    --text:        #121212;
+    --muted:       #5b5853;
+    --accent:      #E63E0E;
+    --accent-ink:  #fff;
+    --glass:       rgba(250,248,245,.75);
+    --shadow:      0 30px 80px -30px rgba(230,62,14,.35);
+  }
+
+
+  /* =====================================================================
+     3. BASE + COMPONENTS
+     ===================================================================== */
+
+  /* Anchor links glide instead of jumping. Switched off for visitors who
+     ask for reduced motion (see section 5). */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* The transition is what makes the theme toggle fade rather than snap. */
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Calibri, Carlito, 'Segoe UI', system-ui, sans-serif;
+    transition: background .3s, color .3s;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Two tiny helpers used all over the markup. */
+  .muted  { color: var(--muted); }
+  .accent { color: var(--accent); }
+
+  /* ---- Card -----------------------------------------------------------
+     The workhorse surface: services, results, process, FAQ rows. Gets a
+     3D tilt and a glow in the motion layer; see the OVERRIDE blocks. */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    transition: transform .35s cubic-bezier(.2,.8,.2,1), background .3s, border-color .3s;
+  }
+  .card:hover {
+    background: var(--card-hover);
+    /* Blend the border toward the accent rather than hard-switching it. */
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    transform: translateY(-4px);
+  }
+
+  /* ---- Frosted glass --------------------------------------------------
+     Used by the nav bar, the enquiry form and the floating chips. The
+     -webkit- copy is there for Safari. */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--line);
+  }
+
+  /* ---- Buttons --------------------------------------------------------
+     min-height 44px is the accessible minimum tap size. The pill radius
+     (999px) is deliberately larger than any button, which keeps the ends
+     perfectly round whatever the text length. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .85rem 1.4rem;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: transform .2s, box-shadow .3s, background .2s;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: var(--shadow);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+  }
+  .btn-ghost {
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: var(--card);
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+  }
+
+  /* ---- Small type -----------------------------------------------------
+     .eyebrow is the little orange label above each section heading.
+     .h-display is the tight tracking used on big headlines. */
+  .eyebrow {
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .h-display {
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.02;
+  }
+
+  /* ---- Scroll reveal --------------------------------------------------
+     Elements start invisible and shifted down; the script adds .in when
+     they scroll into view. Refined in the motion layer (OVERRIDE). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1);
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- Ambient glow ---------------------------------------------------
+     .grain sits on the hero and contact sections and paints two soft
+     orange pools behind the content. Replaced by a cursor-following
+     version in the motion layer (OVERRIDE). */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 80% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 0% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+
+  /* ---- Reel tile ------------------------------------------------------
+     A 9:16 portrait frame — the shape of a Reel / Short / TikTok. Used for
+     the work grid and for the hero phone screen. The gradient background
+     is what shows if an image fails to load. */
+  .reel {
+    aspect-ratio: 9/16;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(160deg, #2a2a2e, #101012);
+    border: 1px solid var(--line);
+  }
+  .reel img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;        /* fill the frame, cropping rather than squashing */
+    transition: transform .6s;
+  }
+  .reel:hover img {
+    transform: scale(1.06);   /* slow push-in on hover */
+  }
+  /* Dark gradient so the white caption stays readable over any photo. */
+  .reel .shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,.85), transparent 55%);
+  }
+
+  /* ---- Marquee --------------------------------------------------------
+     The scrolling word strip. The markup contains the word list twice; the
+     animation slides exactly 50%, so the second copy lands where the first
+     began and the loop is seamless. width:max-content stops it wrapping. */
+  .marquee {
+    display: flex;
+    gap: 3rem;
+    width: max-content;
+    animation: scroll 32s linear infinite;
+  }
+  @keyframes scroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* ---- Form fields ----------------------------------------------------
+     The focus ring is drawn with box-shadow rather than outline so it can
+     follow the rounded corners. */
+  .field {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: .85rem 1rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    min-height: 48px;
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  /* ---- Chips ----------------------------------------------------------
+     Used for the work filter and the form's service picker. In the form
+     the real radio input is visually hidden and the chip is its label, so
+     "input:checked + .chip" is what paints the selected state. Keyboard
+     users still focus the actual radio. */
+  .chip {
+    cursor: pointer;
+    padding: .6rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    transition: all .2s;
+    font-weight: 600;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+  }
+  input:checked + .chip,
+  .chip.on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  /* ---- FAQ accordion --------------------------------------------------
+     Animating height to "auto" is impossible in CSS, so the body is a grid
+     whose single row goes from 0fr to 1fr — which IS animatable. The inner
+     div needs overflow:hidden for the clip to work. */
+  .faq-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .35s ease;
+  }
+  .faq-body > div {
+    overflow: hidden;
+  }
+  .faq.open .faq-body {
+    grid-template-rows: 1fr;
+  }
+  /* The "+" icon rotates 45° into an "×" when the row opens. */
+  .faq.open .faq-icon {
+    transform: rotate(45deg);
+  }
+  .faq-icon {
+    transition: transform .3s;
+  }
+
+  /* Dashed pill marking placeholder content. */
+  .tag-placeholder {
+    font-size: .65rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border: 1px dashed var(--line);
+    border-radius: 999px;
+    padding: .15rem .55rem;
+    color: var(--muted);
+  }
+
+  /* Visible focus ring for keyboard users only — :focus-visible does not
+     fire on mouse clicks, so this never shows up as a stray outline. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+
+  /* =====================================================================
+     4. MOTION LAYER
+     Everything that moves. Kept together so the whole lot can be reasoned
+     about — and disabled — in one place (section 5 switches it all off).
+     ===================================================================== */
+
+  /* ---- Scroll progress bar -------------------------------------------
+     The thin orange line across the very top. Width is set from JS. */
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    z-index: 60;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, #fff), var(--accent));
+    box-shadow: 0 0 18px var(--accent);
+  }
+
+  /* The nav slides out of view on scroll down and returns on scroll up.
+     -130% rather than -100% so the shadow clears the top edge too. */
+  header {
+    transition: transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  header.hide {
+    transform: translateY(-130%);
+  }
+
+  /* ---- Cursor spotlight (OVERRIDE of .grain::before above) ------------
+     Same two pools, except the first one now follows the pointer: the JS
+     writes --mx/--my as percentages on pointermove. The fallback values
+     (78%, 6%) are what shows before the pointer has moved, and on touch
+     devices where it never will. */
+  .grain::before {
+    background:
+      radial-gradient(42% 42% at var(--mx,78%) var(--my,6%), color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 0% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+    transition: background .6s ease;
+  }
+
+  /* A second, larger orange blob that drifts on a slow loop. Sized in vw
+     so it scales with the viewport, but capped at 520px on big screens. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    width: 38vw;
+    height: 38vw;
+    max-width: 520px;
+    max-height: 520px;
+    right: -8vw;
+    bottom: -12vw;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 68%);
+    filter: blur(10px);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  /* "alternate" means it eases back rather than snapping to the start. */
+  @keyframes drift {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(-8vw,-6vw,0) scale(1.25); }
+  }
+
+  /* ---- Scroll reveal, refined (OVERRIDE of .reveal above) -------------
+     Adds a slight scale-up and a longer, softer curve. The per-element
+     stagger delay is applied from JS. will-change asks the browser to
+     promote these to their own layer so the fade stays smooth. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px) scale(.985);
+    transition: opacity .75s ease, transform .9s cubic-bezier(.2,.8,.2,1);
+    will-change: opacity, transform;
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- Headline, word by word ----------------------------------------
+     The script wraps every word of the <h1> in <span class="w"> and gives
+     each one an increasing animation-delay, so the headline assembles.
+     "forwards" holds the final frame instead of snapping back. */
+  .w {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(.75em) rotate(3deg);
+    animation: wordIn .85s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes wordIn {
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---- Button motion (OVERRIDE: adds positioning for the sheen) -------
+     overflow:hidden is what clips the sheen to the pill shape. */
+  .btn {
+    position: relative;
+    overflow: hidden;
+  }
+  /* Any icon inside a button eases; the trailing one slides right. */
+  .btn svg {
+    transition: transform .3s cubic-bezier(.2,.8,.2,1);
+  }
+  .btn:hover svg:last-child {
+    transform: translateX(4px);
+  }
+  /* A diagonal white gleam, parked off to the left until hover. */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%) skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.38), transparent);
+  }
+  .btn-primary:hover::after {
+    animation: sheen .75s ease forwards;
+  }
+  @keyframes sheen {
+    to { transform: translateX(120%) skewX(-18deg); }
+  }
+
+  /* ---- Card motion (OVERRIDE: adds positioning + glow) ----------------
+     preserve-3d lets the JS tilt render with real perspective. */
+  .card {
+    position: relative;
+    transform-style: preserve-3d;
+  }
+  /* Glow that tracks the pointer; JS writes --cx/--cy on pointermove. */
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s;
+    background: radial-gradient(200px 200px at var(--cx,50%) var(--cy,50%), color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  }
+  .card:hover::after {
+    opacity: 1;
+  }
+  /* Lift normal children above the glow. Absolutely positioned children
+     (like the "Most popular" badge) are excluded, because giving them
+     position:relative would knock them out of their corner. */
+  .card > *:not(.absolute) {
+    position: relative;
+    z-index: 1;
+  }
+  .card > .absolute {
+    z-index: 2;
+  }
+
+  /* ---- Reel shine -----------------------------------------------------
+     A light sweep across the tile on hover, clipped by .reel's
+     overflow:hidden. */
+  .reel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    transform: translateX(-130%) skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    transition: transform .85s cubic-bezier(.2,.8,.2,1);
+  }
+  .reel:hover::after {
+    transform: translateX(130%) skewX(-18deg);
+  }
+
+  /* ---- Marquee edges --------------------------------------------------
+     A mask fades the strip out at both ends so words dissolve rather than
+     being chopped off. Hovering pauses the scroll so it can be read. */
+  .marquee-wrap {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-wrap:hover .marquee {
+    animation-play-state: paused;
+  }
+
+  /* ---- Floating accents ----------------------------------------------- */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  /* Only the midpoint is declared, so it rises and settles back. */
+  @keyframes float {
+    50% { transform: translateY(-14px); }
+  }
+  /* An expanding halo, drawn with box-shadow so it costs no extra element. */
+  .pulse-ring {
+    animation: pulseRing 2.6s ease-out infinite;
+  }
+  @keyframes pulseRing {
+    0%        { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    70%, 100% { box-shadow: 0 0 0 22px transparent; }
+  }
+
+  /* Tabular figures keep the animated counters from jittering as digits
+     change width mid-count. */
+  [data-count] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* OVERRIDE of .chip above: swaps the blanket "all" transition for named
+     properties, so the lift can use its own easing curve. */
+  .chip {
+    transition: transform .2s cubic-bezier(.2,.8,.2,1), background .2s, color .2s, border-color .2s;
+  }
+  .chip:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ---- Heading underline ----------------------------------------------
+     Starts at scaleX(0) and draws left-to-right when the parent block
+     gets .in from the reveal observer. */
+  .sweep {
+    position: relative;
+    display: inline-block;
+  }
+  .sweep::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -.12em;
+    height: 3px;
+    width: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .9s cubic-bezier(.2,.8,.2,1) .2s;
+  }
+  .reveal.in .sweep::after,
+  .sweep.in::after {
+    transform: scaleX(1);
+  }
+
+  /* ---- Multi-step form transitions ------------------------------------ */
+  .step {
+    animation: stepIn .45s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes stepIn {
+    from { opacity: 0; transform: translateX(18px); }
+  }
+  .step-bar {
+    transition: background .45s ease;
+  }
+  #thanks.show {
+    animation: popIn .5s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(.94); }
+  }
+
+  /* ---- Custom cursor and click feedback -------------------------------
+     Two fixed elements follow the pointer: #cur is a small dot that tracks
+     exactly, #ring is a larger outline that eases along behind it and
+     morphs around whatever is being pointed at. Both are pointer-events:
+     none so they never intercept a click. Desktop only — the media query
+     at the end of this block hides them on touch devices. */
+  #cur,
+  #ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    pointer-events: none;
+    border-radius: 50%;
+  }
+  /* Negative margins centre each element on the pointer coordinate. */
+  #cur {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    margin: -3.5px 0 0 -3.5px;
+    transition: opacity .25s, transform .18s ease;
+  }
+  /* Size, position and radius are driven from JS every frame — see the
+     animation loop in the script. Only the colours transition in CSS. */
+  #ring {
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  /* .press is added on mouse-down and removed on mouse-up. */
+  body.cursor-on #ring.press {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    border-color: var(--accent);
+  }
+  body.cursor-on #cur.press {
+    transform: scale(2.1);
+  }
+  /* .hide is applied when the pointer leaves the window entirely. */
+  body.cursor-on #cur.hide,
+  body.cursor-on #ring.hide {
+    opacity: 0;
+  }
+  /* Hide the real cursor only once the custom one is confirmed running —
+     the script adds .cursor-on — so a failure never leaves a page with no
+     cursor at all. Text fields keep their I-beam. */
+  body.cursor-on,
+  body.cursor-on a,
+  body.cursor-on button,
+  body.cursor-on label,
+  body.cursor-on .chip {
+    cursor: none;
+  }
+  body.cursor-on input,
+  body.cursor-on textarea {
+    cursor: text;
+  }
+
+  /* The expanding circle spawned at each click. The script removes the
+     element when the animation ends, so they never pile up. */
+  .ripple {
+    position: fixed;
+    z-index: 9998;
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: rippleOut .65s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes rippleOut {
+    to { transform: scale(7); opacity: 0; }
+  }
+
+  /* Physical press feedback. !important is needed because the magnetic-
+     button script writes an inline transform that would otherwise win. */
+  .btn:active {
+    transform: scale(.96) !important;
+  }
+  /* Snap back quickly on click rather than using the slow hover easing. */
+  .card:active {
+    transition: transform .08s;
+  }
+
+  /* No custom cursor on touch screens — there is no pointer to follow. */
+  @media (hover: none), (pointer: coarse) {
+    #cur, #ring { display: none; }
+  }
+
+  /* ---- Hero phone screen ----------------------------------------------
+     The mock Reel is drawn entirely in CSS: no image, and no third-party
+     logos. container-type lets the caption size itself against the phone's
+     width (cqw units) rather than the viewport, so it stays in proportion
+     at every screen size. */
+  .phone-art {
+    container-type: inline-size;
+    background: radial-gradient(120% 80% at 50% 0%, #1d1d22, #0b0b0e 70%);
+  }
+  /* Faint editing-timeline grid, masked so it fades out at the edges. */
+  .art-grid {
+    position: absolute;
+    inset: 0;
+    opacity: .5;
+    background-image:
+      linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px);
+    background-size: 28px 28px;
+            mask-image: radial-gradient(70% 60% at 50% 45%, #000, transparent);
+    -webkit-mask-image: radial-gradient(70% 60% at 50% 45%, #000, transparent);
+  }
+  /* Orange bloom behind the caption, breathing on a slow loop. */
+  .art-glow {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 150%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 42%, transparent), transparent 62%);
+    filter: blur(22px);
+    animation: artGlow 7s ease-in-out infinite alternate;
+  }
+  @keyframes artGlow {
+    to { transform: scale(1.18); opacity: .75; }
+  }
+  /* The "RAW → READY" and timecode badges at the top of the screen. */
+  .art-pill {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.16);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    border-radius: 999px;
+    padding: .3rem .7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    letter-spacing: .06em;
+  }
+  /* Blinking record dot. */
+  .art-rec {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: artRec 1.4s ease-in-out infinite;
+  }
+  @keyframes artRec {
+    50% { opacity: .25; }
+  }
+
+  /* The three caption lines that type themselves in and out on a loop. */
+  .art-caption {
+    position: absolute;
+    z-index: 10;
+    left: 1.25rem;
+    right: 1.25rem;
+    top: 38%;
+    display: grid;
+    gap: .15rem;
+    text-align: left;
+  }
+  /* 7.5cqw = 7.5% of the PHONE's width, not the window's. */
+  .cap-line {
+    display: block;
+    color: #fff;
+    font-weight: 700;
+    font-size: clamp(1.4rem, 7.5cqw, 2rem);
+    line-height: 1.04;
+    letter-spacing: -.02em;
+    text-shadow: 0 2px 18px rgba(0,0,0,.6);
+    opacity: 0;
+    animation: capIn 7s ease-in-out infinite;
+  }
+  /* Staggered so the lines arrive one after another. */
+  .cap-line:nth-child(2) { animation-delay: .45s; }
+  .cap-line:nth-child(3) { animation-delay: .9s; font-size: clamp(.95rem, 5cqw, 1.2rem); opacity: 0; }
+  .cap-accent { color: var(--accent); }
+
+  /* In, hold for most of the cycle, then out — all on one 7s loop that
+     matches the play-head below. */
+  @keyframes capIn {
+    0%        { opacity: 0; transform: translateY(14px) scale(.96); }
+    8%, 62%   { opacity: 1; transform: none; }
+    72%, 100% { opacity: 0; transform: translateY(-8px); }
+  }
+
+  /* Three cut markers that light up in sequence, like clips on a timeline. */
+  .art-cut {
+    position: absolute;
+    z-index: 5;
+    left: 1.25rem;
+    top: 21%;
+    display: flex;
+    gap: .4rem;
+  }
+  .art-cut span {
+    width: 26px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,.22);
+    animation: cutOn 7s ease-in-out infinite;
+  }
+  .art-cut span:nth-child(2) { animation-delay: .5s; }
+  .art-cut span:nth-child(3) { animation-delay: 1s; }
+  @keyframes cutOn {
+    10%, 60% { background: var(--accent); width: 40px; }
+  }
+
+  /* Audio waveform. Each bar is an <i>; the nth-child rules below hand out
+     different durations and delays so the bars never march in lockstep. */
+  .art-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 42px;
+  }
+  .art-wave i {
+    flex: 1;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 35%, #fff));
+    opacity: .85;
+    height: 30%;
+    transform-origin: bottom;
+    animation: waveBar 1.5s ease-in-out infinite;
+  }
+  .art-wave i:nth-child(3n)  { animation-duration: 1.9s; }
+  .art-wave i:nth-child(4n)  { animation-duration: 1.15s; }
+  .art-wave i:nth-child(odd) { animation-delay: .18s; }
+  .art-wave i:nth-child(5n)  { animation-delay: .36s; }
+  @keyframes waveBar {
+    0%, 100% { height: 22%; }
+    50%      { height: 92%; }
+  }
+
+  /* Play-head: 7s to cross, matching the caption loop. */
+  .art-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.18);
+    overflow: hidden;
+    margin-top: .9rem;
+  }
+  .art-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+    width: 0;
+    animation: artPlay 7s linear infinite;
+  }
+  @keyframes artPlay {
+    to { width: 100%; }
+  }
+
+  /* ---- Hero stage: the phone and its floating platform chips ----------
+     perspective on the parent is what gives the phone real depth; without
+     it the rotation would look flat. */
+  .hero-stage {
+    perspective: 1200px;
+  }
+  /* Tilted at rest, straightening when the visitor hovers the stage. */
+  .phone-shell {
+    transform: rotateY(-7deg) rotateX(3deg);
+    transition: transform .6s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 50px 90px -40px rgba(0,0,0,.65);
+  }
+  .hero-stage:hover .phone-shell {
+    transform: rotateY(0deg) rotateX(0deg);
+  }
+  /* Slow dashed orbit ring with a glowing dot riding around it. */
+  .stage-orbit {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 128%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    border-radius: 50%;
+    border: 1px dashed color-mix(in srgb, var(--accent) 38%, transparent);
+    opacity: .55;
+    animation: spin 46s linear infinite;
+  }
+  .stage-orbit::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -5px;
+    width: 9px;
+    height: 9px;
+    margin-left: -4.5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 14px var(--accent);
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* The Reels / Shorts / TikTok chips. Platform NAMES only, deliberately:
+     reproducing the real logos would put three companies' trademarks on a
+     commercial page. Each chip floats on the shared .float animation, with
+     a different delay so they drift independently. */
+  .plat {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .6rem .85rem;
+    border-radius: 16px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,.55);
+    animation: float 7s ease-in-out infinite;
+    transition: transform .3s, border-color .3s;
+  }
+  .plat:hover {
+    border-color: var(--accent);
+  }
+  /* <em> is the small platform label, <b> the format beneath it. */
+  .plat em {
+    display: block;
+    font-style: normal;
+    font-size: .65rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .plat b {
+    display: block;
+    font-size: .9rem;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+  .plat-ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+  /* Negative offsets let the chips overhang the phone on both sides. */
+  .plat-a { top: 11%;    left: -14%;  animation-delay: 0s; }
+  .plat-b { top: 45%;    right: -16%; animation-delay: 1.1s; }
+  .plat-c { bottom: 9%;  left: -10%;  animation-delay: 2.2s; }
+
+  /* On small phones pull the chips in and drop the orbit ring, which would
+     otherwise push past the screen edge. */
+  @media (max-width: 420px) {
+    .plat { padding: .5rem .6rem; gap: .45rem; }
+    .plat b { font-size: .8rem; }
+    .plat-ico { width: 26px; height: 26px; }
+    .plat-a { left: -6%; }
+    .plat-b { right: -6%; }
+    .plat-c { left: -4%; }
+    .stage-orbit { display: none; }
+  }
+
+
+
+  /* =====================================================================
+     4b. SHOWCASE COMPONENTS
+     The interactive pieces: a before/after demo, a bento grid of uneven
+     tiles, a scroll-driven statement and a plan picker. All drawn in CSS,
+     so none of them need image or video assets.
+     ===================================================================== */
+
+  /* ---- Before / after comparison --------------------------------------
+     The centrepiece. Two stacked layers in one 9:16 frame; the top one is
+     clipped at --pos, which a range input drives. A range input rather
+     than raw drag handling means keyboard and touch work for free.
+     container-type lets the caption size against the FRAME, so it stays
+     in proportion whatever the screen. */
+  .compare {
+    position: relative;
+    aspect-ratio: 9/16;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #0c0c0f;
+    container-type: inline-size;
+    box-shadow: 0 40px 80px -40px rgba(0,0,0,.7);
+  }
+  .cmp-layer {
+    position: absolute;
+    inset: 0;
+  }
+  /* The "raw clip" read: desaturated, dim, flat. */
+  .cmp-raw {
+    filter: grayscale(.92) brightness(.95) contrast(.88) saturate(.4);
+  }
+  /* The edited read, revealed from the left edge to --pos. */
+  .cmp-edit {
+    clip-path: inset(0 calc(100% - var(--pos,52%)) 0 0);
+  }
+  /* Shared scene so both sides are recognisably the same shot. */
+  .cmp-scene {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(70% 45% at 50% 32%, #4a4a57, transparent 70%),
+      linear-gradient(170deg, #2b2b33, #141418 75%);
+  }
+  .cmp-scene::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    width: 46%;
+    height: 44%;
+    translate: -50% 0;
+    border-radius: 44% 44% 38% 38%;
+    background: linear-gradient(180deg, #4a4a55, #2a2a32);
+  }
+  /* The lit version: brand glow behind the same subject. */
+  .cmp-scene-lit {
+    background:
+      radial-gradient(60% 40% at 50% 30%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%),
+      radial-gradient(70% 45% at 50% 32%, #3f3f4b, transparent 70%),
+      linear-gradient(170deg, #232329, #0e0e12 75%);
+  }
+
+  /* Small labels shared by both layers. */
+  /* The floor is 12px, not smaller: these sit inside a phone-width frame
+     so the container query wants to shrink them, but 10px type is below
+     the readable minimum no matter what it sits in. */
+  .cmp-file, .cmp-hook, .cmp-tag, .cmp-cta {
+    position: absolute;
+    font-weight: 700;
+    letter-spacing: .04em;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: clamp(.75rem, 3.6cqw, .84rem);
+  }
+  /* Raw-side labels sit on the RIGHT, because the edited layer is drawn
+     from the left edge up to the seam and would otherwise cover them. */
+  .cmp-file {
+    top: 4%;
+    right: 5%;
+    padding: .3rem .7rem;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+  }
+  .cmp-hook {
+    top: 4%;
+    left: 5%;
+    padding: .3rem .7rem;
+    background: var(--accent);
+    color: #fff;
+  }
+  /* Corner labels naming each side, so the comparison needs no caption. */
+  .cmp-tag {
+    bottom: 4.5%;
+    padding: .32rem .8rem;
+    border: 1px solid rgba(255,255,255,.3);
+    color: #fff;
+  }
+  .cmp-tag-raw  { right: 5%; }
+  .cmp-tag-edit { left: 5%; background: var(--accent); border-color: var(--accent); }
+
+  /* Burned-in captions — the single clearest "this was edited" signal. */
+  .cmp-caption {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 45%;
+    display: grid;
+    gap: .1rem;
+  }
+  .cmp-caption b {
+    font-size: clamp(1.1rem, 8.5cqw, 2.1rem);
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    color: #fff;
+    text-shadow: 0 2px 16px rgba(0,0,0,.7);
+  }
+  .cmp-caption em {
+    font-style: normal;
+    font-weight: 700;
+    font-size: clamp(.75rem, 4cqw, 1rem);   /* 12px floor */
+    color: rgba(255,255,255,.85);
+  }
+  .cmp-cta {
+    bottom: 16%;
+    left: 5%;
+    padding: .35rem .8rem;
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    backdrop-filter: blur(6px);
+  }
+
+  /* Flat line on the raw side vs a live waveform on the edit side. */
+  .cmp-flat {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    bottom: 12%;
+    height: 2px;
+    background: rgba(255,255,255,.35);
+  }
+  .cmp-wave {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    bottom: 10%;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 7%;
+  }
+  .cmp-wave i {
+    flex: 1;
+    border-radius: 2px;
+    background: var(--accent);
+    height: 35%;
+    animation: waveBar 1.4s ease-in-out infinite;
+  }
+  .cmp-wave i:nth-child(3n) { animation-duration: 1.9s; }
+  .cmp-wave i:nth-child(odd) { animation-delay: .2s; }
+
+  /* The draggable seam. pointer-events:none so the range input beneath
+     receives every gesture. */
+  .cmp-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #fff;
+    pointer-events: none;
+    box-shadow: 0 0 18px rgba(0,0,0,.6);
+    z-index: 5;
+  }
+  .cmp-grab {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #111;
+    font-size: 1rem;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  }
+  /* The real control: invisible, but full-size, focusable and draggable. */
+  .cmp-range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: ew-resize;
+    z-index: 6;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  .cmp-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 44px;
+    height: 100%;
+  }
+  .cmp-range::-moz-range-thumb {
+    width: 44px;
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
+  /* Keyboard focus has to be visible on the seam, since the input is not. */
+  .cmp-range:focus-visible ~ .cmp-divider .cmp-grab {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* ---- Scroll-driven statement ----------------------------------------
+     The positioning line. Words start dim and light up as the block
+     crosses the screen, which makes the reader slow down and actually
+     take the sentence in. Progress is set from JS. */
+  .hl-line {
+    font-weight: 700;
+    letter-spacing: -.025em;
+    font-size: clamp(1.6rem, 1rem + 2.9vw, 3.1rem);
+    line-height: 1.22;
+    max-width: 22ch;
+  }
+  .hl-w {
+    color: color-mix(in srgb, var(--text) 22%, transparent);
+    transition: color .35s ease;
+  }
+  .hl-w.lit { color: var(--text); }
+  .hl-w.key { color: var(--accent); }
+
+  /* ---- Bento grid ------------------------------------------------------
+     Tiles of different weights in one grid, so the eye lands on the
+     headline figure first instead of scanning identical boxes. Two
+     columns on phones, four from md up. */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: .75rem;
+  }
+  @media (min-width: 768px) {
+    .bento { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1.25rem; }
+    .b-hero { grid-column: span 2; grid-row: span 2; }
+    .b-wide { grid-column: span 2; }
+    /* Widens only once there are four columns, so the final row fills
+       edge to edge instead of leaving a gap on the right. */
+    .b-half { grid-column: span 2; }
+  }
+  /* On phones the headline tile still spans the full width. */
+  .b-hero, .b-wide { grid-column: span 2; }
+  .bento > * {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 150px;
+  }
+  .b-hero { min-height: 260px; }
+  /* The headline figure, sized to dominate the grid. */
+  .b-num {
+    font-weight: 700;
+    letter-spacing: -.04em;
+    line-height: .92;
+    font-size: clamp(2.6rem, 1.2rem + 5.4vw, 5.2rem);
+    color: var(--accent);
+  }
+  .b-sub {
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-size: clamp(1.4rem, 1rem + 1.4vw, 2.1rem);
+  }
+
+  /* ---- Plan picker -----------------------------------------------------
+     Lets the visitor choose a service, then carries that choice into the
+     enquiry form rather than making them state it twice. */
+  .plan-panel {
+    display: none;
+  }
+  .plan-panel.on {
+    display: block;
+    animation: stepIn .4s cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* ---- Process rail ----------------------------------------------------
+     A line that fills as the steps scroll past, so the four stages read as
+     one journey rather than four disconnected cards. Horizontal from md
+     up, vertical below — on a phone the steps stack, so the rail must too. */
+  .rail {
+    position: relative;
+  }
+  .rail-track, .rail-fill {
+    position: absolute;
+    border-radius: 999px;
+  }
+  .rail-track {
+    background: var(--line);
+  }
+  .rail-fill {
+    background: var(--accent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+    transition: height .25s linear, width .25s linear;
+  }
+  /* Phones: a vertical rail down the left, steps indented past it. */
+  .rail-track, .rail-fill { left: 13px; top: 0; width: 2px; }
+  .rail-track { height: 100%; }
+  .rail-fill  { height: 0; }
+  .rail-step  { position: relative; padding-left: 46px; }
+  .rail-dot {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: .8rem;
+    font-weight: 700;
+    background: var(--bg);
+    border: 2px solid var(--line);
+    color: var(--muted);
+    transition: background .3s, border-color .3s, color .3s;
+  }
+  .rail-step.on .rail-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  @media (min-width: 768px) {
+    /* Desktop: rail runs horizontally behind the row of dots. */
+    .rail-track, .rail-fill { left: 0; top: 13px; height: 2px; width: 100%; }
+    .rail-fill { width: 0; }
+    .rail-step { padding-left: 0; padding-top: 48px; }
+    .rail-dot { top: 0; left: 0; }
+  }
+
+
+  /* ---- Marquee v2 -----------------------------------------------------
+     Two rows travelling in opposite directions at different speeds, one
+     solid and one outlined. The counter-motion is what makes it read as a
+     designed band rather than a ticker: the eye cannot settle on either
+     row, so the whole strip feels alive at a glance.
+
+     Each row's word list appears TWICE in the markup; the animation moves
+     exactly 50%, so copy two lands where copy one began. */
+  .mq {
+    display: grid;
+    gap: .15rem;
+    padding: .15rem 0;
+  }
+  .mq-row {
+    display: flex;
+    align-items: center;
+    /* Spacing tracks the type size, so the rhythm holds at every width. */
+    gap: clamp(.9rem, .34rem + 2.06vw, 2.2rem);
+    width: max-content;
+    will-change: transform;
+  }
+  .mq-a { animation: mqLeft 42s linear infinite; }
+  .mq-b { animation: mqRight 54s linear infinite; }
+  @keyframes mqLeft  { to   { transform: translateX(-50%); } }
+  @keyframes mqRight { from { transform: translateX(-50%); } }
+
+  /* Sized as a band, not a headline. Capped well below the section
+     headings so the strip never competes with them: roughly 16px on a
+     phone, 33px on a desktop, and no larger however wide the screen. */
+  .mq-word {
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.12;
+    font-size: clamp(1rem, .55rem + 1.7vw, 2.1rem);
+    white-space: nowrap;
+  }
+  /* The outlined row. The fallback colour keeps the words readable if
+     text-stroke is unsupported; @supports upgrades it to a true outline. */
+  .mq-out {
+    color: color-mix(in srgb, var(--text) 40%, transparent);
+  }
+  @supports (-webkit-text-stroke: 1px red) {
+    .mq-out {
+      color: transparent;
+      -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 58%, transparent);
+    }
+  }
+  /* A 1px outline needs size to read. Below 640px the words are around
+     16px, where the stroke turns muddy, so the second row goes solid and
+     simply sits a shade back from the first. Declared after the @supports
+     block so it wins on source order. */
+  @media (max-width: 640px) {
+    .mq-out {
+      color: color-mix(in srgb, var(--text) 46%, transparent);
+      -webkit-text-stroke: 0;
+    }
+  }
+  /* Diamond separator, drawn with a rotated square. */
+  .mq-dot {
+    width: clamp(7px, .3rem + .5vw, 9px);
+    height: clamp(7px, .3rem + .5vw, 9px);
+    flex: 0 0 auto;
+    rotate: 45deg;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .mq-dot.sm {
+    width: clamp(5px, .2rem + .35vw, 6px);
+    height: clamp(5px, .2rem + .35vw, 6px);
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  /* Hovering anywhere on the band pauses both rows so it can be read. */
+  .mq-wrap:hover .mq-row { animation-play-state: paused; }
+
+  /* ---- Bento motion ---------------------------------------------------- */
+
+  /* Slow aurora behind the headline tile, so the biggest number on the
+     page sits on something that breathes rather than flat black. */
+  .aurora {
+    position: absolute;
+    inset: -40% -20% auto -20%;
+    height: 150%;
+    pointer-events: none;
+    opacity: .55;
+    background:
+      radial-gradient(45% 45% at 25% 30%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 80% 55%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%);
+    filter: blur(32px);
+    animation: auroraDrift 16s ease-in-out infinite alternate;
+  }
+  @keyframes auroraDrift {
+    to { transform: translate3d(-8%, 6%, 0) scale(1.18); }
+  }
+
+  /* Growth bars inside the headline tile. Heights are set per bar as --h
+     and only applied once the tile reveals, so the chart draws itself as
+     the number counts up. */
+  .spark {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 56px;
+    margin-top: 1.5rem;
+  }
+  .spark i {
+    flex: 1;
+    height: 0;
+    border-radius: 4px 4px 2px 2px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 22%, transparent));
+    transition: height 1.1s cubic-bezier(.2,.8,.2,1);
+  }
+  /* Each bar waits a little longer than the one before it. */
+  .spark i:nth-child(1) { transition-delay: .05s; }
+  .spark i:nth-child(2) { transition-delay: .1s; }
+  .spark i:nth-child(3) { transition-delay: .15s; }
+  .spark i:nth-child(4) { transition-delay: .2s; }
+  .spark i:nth-child(5) { transition-delay: .25s; }
+  .spark i:nth-child(6) { transition-delay: .3s; }
+  .spark i:nth-child(7) { transition-delay: .35s; }
+  .spark i:nth-child(8) { transition-delay: .4s; }
+  .spark i:nth-child(9) { transition-delay: .45s; }
+  .spark i:nth-child(10){ transition-delay: .5s; }
+  .spark i:nth-child(11){ transition-delay: .55s; }
+  .spark i:nth-child(12){ transition-delay: .6s; }
+  .reveal.in .spark i { height: var(--h); }
+
+  /* Tile icons tip and lift when their card is hovered. */
+  .tile-ico {
+    transition: transform .4s cubic-bezier(.2,.8,.2,1), background .3s;
+  }
+  .card:hover .tile-ico {
+    transform: translateY(-3px) rotate(-8deg) scale(1.08);
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+
+  /* A thin accent line that draws across a tile on hover. */
+  .tile-rule {
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .55s cubic-bezier(.2,.8,.2,1);
+    margin-top: 1.1rem;
+  }
+  .card:hover .tile-rule { transform: scaleX(1); }
+
+  /* ---- Footer links ----------------------------------------------------
+     Replaces a Tailwind gap utility that was fighting the touch-target
+     rule and leaving the columns looking airy and unaligned. The tap
+     target comes from the link's own height, not from the gap, so the
+     rhythm stays tight on a phone AND stays accessible. */
+  .footer-links {
+    display: grid;
+    gap: 0;
+  }
+  footer .footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    width: fit-content;
+  }
+  @media (pointer: coarse) {
+    footer .footer-links a { min-height: 44px; min-width: 44px; }
+  }
+  .footer-head {
+    font-weight: 700;
+    font-size: .75rem;   /* 12px: the floor for legible UI text */
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .6rem;
+  }
+
+
+  /* =====================================================================
+     4c. MOTION REFINEMENTS
+     The details that separate "animated" from "considered": a shared
+     easing language, entrances that resolve out of focus rather than
+     sliding, a nav indicator that travels between links, and a theme
+     change that wipes across the page instead of blinking.
+     ===================================================================== */
+
+  /* ---- Entrances -------------------------------------------------------
+     A short defocus on the way in. The eye reads a blur resolving as
+     depth — something arriving — where a plain fade reads as a switch
+     being flipped. Desktop only: a filter on many elements at once is
+     the one thing here that can cost frames on a mid-range phone, and
+     the entrance works without it. */
+  @media (min-width: 768px) {
+    .reveal {
+      filter: blur(5px);
+      transition:
+        opacity var(--dur-4) var(--ease-soft),
+        transform var(--dur-4) var(--ease),
+        filter var(--dur-3) var(--ease-soft);
+    }
+    .reveal.in { filter: blur(0); }
+  }
+
+  /* ---- Nav indicator ---------------------------------------------------
+     One bar that travels between links rather than a separate underline
+     fading in under each. Width and position are written from JS; the
+     transition on both is what produces the glide. Hovering previews the
+     destination, and the bar returns to the active section on leave. */
+  #navLinks { position: relative; }
+  #navPill {
+    position: absolute;
+    left: 0;
+    bottom: -7px;
+    height: 2px;
+    width: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--dur-3) var(--ease),
+      width var(--dur-3) var(--ease),
+      opacity var(--dur-2) var(--ease-soft);
+  }
+
+  /* ---- Theme change ----------------------------------------------------
+     With the View Transitions API the new theme is revealed by a circle
+     expanding from the toggle itself, so the switch has a source and a
+     direction. The default cross-fade is disabled; the script drives the
+     clip-path instead. Browsers without the API simply get the instant
+     switch, which is the existing behaviour. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(root) { z-index: 1; }
+  ::view-transition-new(root) { z-index: 2; }
+
+  /* ---- Tactile feedback ------------------------------------------------
+     Buttons and chips now settle on the spring curve, so a press ends
+     with a slight overshoot rather than stopping dead. */
+  .btn { transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-3) var(--ease-soft), background var(--dur-1) var(--ease-soft); }
+  .chip { transition: transform var(--dur-2) var(--ease-spring), background var(--dur-1) var(--ease-soft), color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft); }
+  .card { transition: transform var(--dur-3) var(--ease), background var(--dur-2) var(--ease-soft), border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-3) var(--ease-soft); }
+  .field { transition: border-color var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft); }
+
+  /* =====================================================================
+     5. REDUCED MOTION
+     Honours the OS-level "reduce motion" setting, which people with
+     vestibular disorders and migraine triggers rely on. Everything still
+     renders — animations are switched off and anything that starts
+     invisible or mid-animation is pinned to its finished state.
+     ===================================================================== */
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Reveals: visible immediately, no fade or slide. */
+    .reveal, .reveal.in { transition: none; opacity: 1; transform: none; }
+    .w { animation: none; opacity: 1; transform: none; }
+
+    .marquee, .grain::after, .float, .pulse-ring, .step { animation: none; }
+    .sweep::after { transform: scaleX(1); }   /* underline drawn, not drawing */
+    header.hide { transform: none; }          /* nav never hides */
+    html { scroll-behavior: auto; }           /* jump, don't glide */
+
+    /* No cursor effects at all. */
+    #cur, #ring, .ripple { display: none; }
+
+    /* Phone screen frozen on a representative frame rather than blank. */
+    .art-glow, .cap-line, .art-cut span, .art-wave i, .art-fill, .art-rec { animation: none; }
+    .cap-line { opacity: 1; }
+    .art-fill { width: 62%; }
+    .art-wave i { height: 55%; }
+
+    .stage-orbit, .plat { animation: none; }
+
+    /* New showcase components: shown complete, nothing moving. */
+    .cmp-wave i { animation: none; height: 55%; }
+    .mq-row { animation: none; }
+    .reveal { filter: none; }
+    #navPill { transition: none; }
+    .aurora { animation: none; }
+    .spark i { transition: none; }
+    .tile-rule { transition: none; }
+    .hl-w { color: var(--text); transition: none; }
+    .hl-w.key { color: var(--accent); }
+    .rail-fill { transition: none; }
+    .plan-panel.on { animation: none; }
+    .phone-shell { transform: none; }
+
+    /* Give the real cursor back, since the custom one is gone. */
+    body.cursor-on,
+    body.cursor-on a,
+    body.cursor-on button { cursor: auto; }
+  }
+
+
+  /* =====================================================================
+     6. POLISH + RESPONSIVE
+     Typography, texture, and the handful of rules that change by screen
+     size. These were all added after testing the page at real viewport
+     widths, which is why they sit last and override earlier values.
+     ===================================================================== */
+
+  /* Predictable sizing: padding and borders count inside a stated width. */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Belt and braces against sideways scroll — one overhanging decorative
+     element would otherwise let the whole page slide. */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Body copy grows very slightly with the viewport; the clamp keeps it
+     between 1rem and 1.07rem however wide the screen gets. */
+  body {
+    font-size: clamp(1rem, .97rem + .18vw, 1.07rem);
+    line-height: 1.62;
+  }
+
+  /* Brand-coloured text selection. */
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Stops the fixed nav covering a heading when an anchor link lands. */
+  [id] {
+    scroll-margin-top: 104px;
+  }
+
+  img, svg, video {
+    max-width: 100%;
+  }
+
+  /* ---- Fluid type ------------------------------------------------------
+     clamp(min, preferred, max) scales smoothly with the viewport instead
+     of jumping at each breakpoint, so headlines never land awkwardly at
+     in-between widths like 900px. */
+  h1.h-display {
+    font-size: clamp(2.45rem, 1.3rem + 5vw, 4.5rem);
+    line-height: 1.015;
+    letter-spacing: -.035em;
+  }
+  h2.h-display {
+    font-size: clamp(1.95rem, 1.25rem + 2.5vw, 3.15rem);
+    line-height: 1.06;
+  }
+  h3 {
+    letter-spacing: -.012em;
+  }
+  /* balance evens out heading line lengths; pretty stops paragraphs ending
+     on a single orphaned word. */
+  p { text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* Very faint film grain over the whole page, which stops the large flat
+     areas looking digitally clean. The noise is generated by an inline SVG
+     filter, so it costs no network request. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9996;
+    pointer-events: none;
+    opacity: .028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* OVERRIDE of .eyebrow above: adds the short accent dash before the
+     label. inline-flex is what lets the dash sit on the same line. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* OVERRIDE of .card above: slightly larger radius, plus a gradient
+     hairline that lights along the top-left edge on hover. The mask trick
+     paints only the 1px padding ring, leaving the middle transparent —
+     that is how you get a gradient border in CSS. */
+  .card {
+    border-radius: 22px;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 60%, transparent), transparent 48%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+  }
+  .card:hover::before {
+    opacity: 1;
+  }
+  .card:hover {
+    box-shadow: 0 30px 70px -45px rgba(0,0,0,.75);
+  }
+
+  /* Underlines the nav link for whichever section is currently in view;
+     the script adds .active as you scroll. */
+  header nav a.active {
+    color: var(--text);
+  }
+  /* The underline itself lives on #navPill, which travels between links
+     — see section 4c. This rule only brightens the active label. */
+
+  /* OVERRIDE of .btn above: a little more breathing room horizontally. */
+  .btn {
+    padding: .9rem 1.5rem;
+    letter-spacing: .005em;
+  }
+  .btn-ghost:hover {
+    background: var(--card-hover);
+  }
+
+  /* OVERRIDE of #ring above: only colour transitions in CSS. Size and
+     position are animated frame by frame in JS, and a CSS transition on
+     those would fight the script and lag behind the pointer. */
+  #ring {
+    transition: background .25s, border-color .25s, opacity .25s;
+  }
+  /* .snapped = the ring has wrapped itself around a clickable element. */
+  body.cursor-on #ring.snapped {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  #cur {
+    mix-blend-mode: normal;
+  }
+
+  /* ---- Phones ---------------------------------------------------------
+     Sections carry Tailwind padding utilities, so !important is needed to
+     tighten them here. The first section gets extra top padding to clear
+     the fixed nav. */
+  @media (max-width: 640px) {
+    main > section, footer {
+      padding-top: 4.25rem !important;
+      padding-bottom: 4.25rem !important;
+    }
+    main > section:first-child {
+      padding-top: 8rem !important;
+    }
+    /* The marquee is a band, not a content section — the rule above was
+       giving two lines of text 68px of padding top and bottom. */
+    main > section.mq-wrap {
+      padding-top: 1.1rem !important;
+      padding-bottom: 1.1rem !important;
+    }
+    .btn { width: auto; }
+    .card { border-radius: 18px; }
+    body .max-w-6xl, body .max-w-3xl {
+      padding-left: 1.15rem;
+      padding-right: 1.15rem;
+    }
+  }
+
+  /* Very small phones (older/compact handsets). */
+  @media (max-width: 380px) {
+    .plat b  { font-size: .82rem; }
+    .plat em { font-size: .75rem; }
+    .hero-stage { max-width: 250px; }
+    .btn { padding: .8rem 1.1rem; font-size: .95rem; }
+  }
+
+  /* Phones held sideways: little vertical room, so trim the hero hard or
+     the headline alone fills the screen. */
+  @media (max-height: 560px) and (orientation: landscape) {
+    main > section:first-child {
+      padding-top: 6.5rem !important;
+      padding-bottom: 3rem !important;
+    }
+    .hero-stage { max-width: 220px; }
+  }
+
+  /* Large monitors: widen the content shell so it does not sit as a narrow
+     column stranded in the middle of the screen. */
+  @media (min-width: 1536px) {
+    body .max-w-6xl { max-width: 80rem; }
+    body .max-w-3xl { max-width: 48rem; }
+  }
+  @media (min-width: 2200px) {
+    body .max-w-6xl { max-width: 90rem; }
+    body { font-size: 1.14rem; }
+  }
+
+  /* ---- Legibility and tap targets -------------------------------------
+     Nothing below 12px, and 44px minimum tap targets on touch. */
+  .tag-placeholder { font-size: .75rem; }
+  .plat em { font-size: .78rem; }   /* OVERRIDE: was .65rem, too small */
+  .phone-art .text-\[11px\] { font-size: 12px; }
+  footer .muted a { display: inline-block; }
+
+  /* pointer: coarse means a finger, not a mouse. Desktop spacing stays
+     tight because these rules simply do not apply there. */
+  @media (pointer: coarse) {
+    /* Footer column links are handled by .footer-links, which sets the
+       tap target on the link itself rather than padding it out with a
+       gap, which a utility class would override. These cover the
+       remaining links. */
+    footer p a {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+    header a[aria-label="Boldx.io home"],
+    footer a[aria-label="Boldx.io home"] { min-height: 44px; }
+    header nav ul a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: .25rem .35rem;
+    }
+  }
+
+  /* ---- Nav visibility --------------------------------------------------
+     These must not be left to Tailwind alone. .btn sets
+     display:inline-flex, and depending on stylesheet order that can beat
+     Tailwind's .lg\:hidden, putting the hamburger on desktop beside the
+     full nav. Pinning it by ID with !important removes the ambiguity.
+     1024px is the switch point: below it the hamburger, above it the
+     links. Tablets stay on the hamburger because they are touch devices. */
+  @media (min-width: 1024px) {
+    #menuBtn, #mobileMenu { display: none !important; }
+  }
+  @media (max-width: 1023.98px) {
+    #navLinks { display: none !important; }
+  }
+  /* Below 400px the header CTA would crowd the logo, so it steps aside —
+     the same link is in the open menu. */
+  @media (max-width: 400px) {
+    #navCta { display: none !important; }
+  }
+  /* The script toggles .hidden; this guarantees it closes. */
+  #mobileMenu.hidden {
+    display: none !important;
+  }
+
+  </style>
+</head>
+
+
+<!-- =======================================================================
+     7. MARKUP
+     ======================================================================= -->
+
+<body class="antialiased">
+
+  <!-- Three decorative elements that live outside the page flow and follow
+       the scroll or the pointer. aria-hidden keeps them out of screen
+       readers, which have nothing useful to say about a cursor dot. -->
+  <div id="progress" aria-hidden="true"></div>  <!-- scroll progress bar   -->
+  <div id="ring" aria-hidden="true"></div>      <!-- cursor outline ring   -->
+  <div id="cur" aria-hidden="true"></div>       <!-- cursor dot            -->
+
+
+  <!-- ===================================================================
+       NAVIGATION
+       Fixed to the top. The links show from 1024px up; below that they
+       collapse into the hamburger menu underneath.
+       =================================================================== -->
+  <header class="fixed top-0 inset-x-0 z-50">
+    <nav class="glass mx-3 sm:mx-6 mt-3 rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between max-w-6xl lg:mx-auto" aria-label="Main">
+
+      <!-- Logo. Swap the orange "B" square for an <img> once a logo
+           file is available. -->
+      <a href="#top" class="flex items-center gap-2 font-bold text-xl tracking-tight" aria-label="Boldx.io home">
+        <span class="w-8 h-8 rounded-lg grid place-items-center font-bold" style="background:var(--accent);color:#fff">B</span>
+        <span>Boldx<span class="accent">.io</span></span>
+      </a>
+
+      <!-- Desktop links. The ID is needed by the CSS that pins visibility. -->
+      <ul id="navLinks" class="hidden lg:flex items-center gap-7 text-sm font-semibold muted">
+        <li><a class="hover:text-[var(--text)] transition" href="#services">Services</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#work">Work</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#results">Results</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#process">Process</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#faq">FAQ</a></li>
+        <!-- The travelling underline. An <li> rather than a <span> so the
+             list stays valid; it is positioned absolutely, so it takes no
+             space in the flex row. -->
+        <li id="navPill" aria-hidden="true"></li>
+      </ul>
+
+      <div class="flex items-center gap-2">
+        <!-- Theme toggle. The icon is swapped in JS to match the mode. -->
+        <button id="themeBtn" class="btn btn-ghost !p-0 w-11 h-11" aria-label="Toggle light or dark theme"><i data-lucide="sun" class="w-5 h-5"></i></button>
+
+        <!-- The single most important button on the page. -->
+        <a id="navCta" href="#contact" class="btn btn-primary hidden sm:inline-flex !py-2.5">Start a chat</a>
+
+        <!-- aria-expanded is kept in sync by the script so screen readers
+             announce whether the menu is open. -->
+        <button id="menuBtn" class="btn btn-ghost !p-0 w-11 h-11 lg:hidden" aria-label="Open menu" aria-expanded="false"><i data-lucide="menu" class="w-5 h-5"></i></button>
+      </div>
+    </nav>
+
+    <!-- Mobile menu. Hidden by default; the script toggles .hidden, and
+         tapping any link inside closes it again. -->
+    <div id="mobileMenu" class="glass hidden lg:hidden mx-3 mt-2 rounded-3xl p-5">
+      <ul class="grid gap-1 text-lg font-semibold">
+        <li><a class="block py-3" href="#services">Services</a></li>
+        <li><a class="block py-3" href="#work">Work</a></li>
+        <li><a class="block py-3" href="#results">Results</a></li>
+        <li><a class="block py-3" href="#process">Process</a></li>
+        <li><a class="block py-3" href="#faq">FAQ</a></li>
+        <li><a class="btn btn-primary mt-2" href="#contact">Start a chat</a></li>
+      </ul>
+    </div>
+  </header>
+
+
+  <main id="top">
+
+  <!-- ===================================================================
+       HERO
+       Headline, proof numbers, the two calls to action, and the phone
+       mock-up. Two columns on large screens, stacked below that.
+       =================================================================== -->
+  <section class="relative grain overflow-hidden pt-36 pb-20 sm:pt-44">
+    <div class="relative max-w-6xl mx-auto px-5 sm:px-6 grid lg:grid-cols-[1.15fr_.85fr] gap-14 items-center">
+
+      <!-- ---- Left column: the pitch ---- -->
+      <div>
+        <p class="eyebrow reveal">Short-form video, done properly</p>
+
+        <!-- The script splits this into per-word spans so it assembles
+             itself on load. Keep the markup simple; nested elements are
+             walked recursively, but the fewer the better. -->
+        <h1 class="h-display text-5xl sm:text-6xl lg:text-7xl mt-4 reveal">
+          We turn raw footage into <span class="accent">polished short-form videos.</span>
+        </h1>
+
+        <p class="muted text-lg sm:text-xl mt-6 max-w-xl reveal">
+          Sharp edits. Clear strategy. Consistent content. Boldx.io helps creators and professionals stop the scroll — with editing, hooks, captions and calls to action built to grow your business.
+        </p>
+
+        <div class="flex flex-wrap gap-3 mt-9 reveal">
+          <a href="#contact" class="btn btn-primary">Start a chat <i data-lucide="arrow-right" class="w-5 h-5"></i></a>
+          <a href="#work" class="btn btn-ghost"><i data-lucide="play" class="w-4 h-4"></i> See our work</a>
+        </div>
+
+        <!-- Proof numbers. data-count is the target figure and
+             data-suffix what follows
+             it; the script counts up from zero when they scroll into view.
+             A <dl> is the correct element for label/value pairs — the
+             visible captions sit below, so the <dt>s are screen-reader
+             only to avoid reading each label twice.
+             NOTE: the number and its unit must stay on one line, or the
+             browser inserts a space ("3 yrs" instead of "3yrs"). -->
+        <dl class="grid grid-cols-3 gap-4 mt-14 max-w-lg reveal">
+          <div><dt class="sr-only">Views generated</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="850" data-suffix="M+">0</span></dd><p class="muted text-sm">Views generated</p></div>
+          <div><dt class="sr-only">Brands served</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="67" data-suffix="+">0</span></dd><p class="muted text-sm">Brands served</p></div>
+          <div><dt class="sr-only">Years in short-form</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="3" data-suffix="">0</span><span class="accent">yrs</span></dd><p class="muted text-sm">In the space</p></div>
+        </dl>
+      </div>
+
+      <!-- ---- Right column: one edit, every short-form feed ----
+           data-para is the parallax strength read by the scroll handler:
+           negative drifts against the scroll, positive with it. -->
+      <div class="hero-stage relative mx-auto w-full max-w-[330px] reveal" data-para="-0.05">
+
+        <div class="stage-orbit" aria-hidden="true"></div>
+        <!-- Soft orange bloom behind the phone. -->
+        <div class="absolute -inset-6 rounded-[3rem] blur-3xl opacity-40" style="background:var(--accent)"></div>
+
+        <!-- The phone itself: a glass shell around a 9:16 screen. Every
+             part of the screen below is drawn in CSS — no image file and
+             no third-party logos. -->
+        <div class="relative glass rounded-[2.5rem] p-3 phone-shell">
+          <div class="reel phone-art !rounded-[2rem]">
+
+            <div class="art-grid" aria-hidden="true"></div>   <!-- timeline grid -->
+            <div class="art-glow" aria-hidden="true"></div>   <!-- orange bloom  -->
+
+            <!-- Status row: the "before → after" promise, and a timecode. -->
+            <div class="absolute top-4 left-4 right-4 flex justify-between text-xs font-bold z-10">
+              <span class="art-pill">RAW <span class="accent">&#8594;</span> READY</span>
+              <span class="art-pill"><span class="art-rec"></span> 0:24</span>
+            </div>
+
+            <!-- Burned-in captions, cycling on a 7-second loop. -->
+            <div class="art-caption" aria-hidden="true">
+              <span class="cap-line">STOP</span>
+              <span class="cap-line cap-accent">SCROLLING</span>
+              <span class="cap-line">&#8212; HERE'S WHY</span>
+            </div>
+
+            <!-- Three cut markers that light in sequence. -->
+            <div class="art-cut" aria-hidden="true"><span></span><span></span><span></span></div>
+
+            <!-- Waveform, play-head and the edit checklist. Each <i> is one
+                 waveform bar; the count is arbitrary, add or remove freely. -->
+            <div class="absolute bottom-5 left-5 right-5 z-10">
+              <div class="art-wave" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="art-track" aria-hidden="true"><div class="art-fill"></div></div>
+              <div class="flex items-center justify-between mt-3 text-[11px] font-bold text-white/70">
+                <span>HOOK &middot; 0&#8211;2s</span><span>CAPTIONS ON</span><span>CTA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Destination chips: the same edit, ready for each feed. Platform
+             names only — see the .plat comment in the stylesheet. To show
+             Reels alone, delete plat-b and plat-c; the hero still works. -->
+        <div class="plat plat-a" data-para="0.04">
+          <span class="plat-ico"><i data-lucide="film" class="w-4 h-4"></i></span>
+          <span><em>Instagram</em><b>Reels</b></span>
+        </div>
+        <div class="plat plat-b" data-para="0.07">
+          <span class="plat-ico"><i data-lucide="play" class="w-4 h-4"></i></span>
+          <span><em>YouTube</em><b>Shorts</b></span>
+        </div>
+        <div class="plat plat-c" data-para="0.05">
+          <span class="plat-ico"><i data-lucide="music-2" class="w-4 h-4"></i></span>
+          <span><em>TikTok</em><b>9:16 ready</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       MARQUEE
+       Two bands running in opposite directions at different speeds: the
+       top row solid, the bottom row outlined. The counter-motion is what
+       stops it reading like a stock ticker — the eye cannot lock onto
+       either row, so the strip stays alive without shouting.
+
+       Each row's word list appears TWICE on purpose. The animation travels
+       exactly 50%, so the second copy arrives where the first began and
+       the loop never shows a seam. Edit one copy, edit both.
+
+       Hovering pauses both rows. Decorative, so the whole band is hidden
+       from screen readers.
+       =================================================================== -->
+  <section aria-hidden="true" class="py-5 sm:py-6 border-y overflow-hidden mq-wrap" style="border-color:var(--line);background:var(--bg2)">
+    <div class="mq marquee-wrap">
+      <div class="mq-row mq-a"><span class="mq-word ">Hooks</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Captions</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Visuals</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Scripts</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">CTAs</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Strategy</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Hooks</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Captions</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Visuals</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Scripts</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">CTAs</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Strategy</span><span class="mq-dot " aria-hidden="true"></span></div>
+      <div class="mq-row mq-b"><span class="mq-word mq-out">Pacing</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Colour</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Sound design</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Subtitles</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Retention</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Thumbnails</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Pacing</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Colour</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Sound design</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Subtitles</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Retention</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Thumbnails</span><span class="mq-dot sm" aria-hidden="true"></span></div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       THE CRAFT DEMO
+       Demonstrates the service rather than describing it: the visitor
+       drags a seam across one frame and sees what an edit adds — a hook
+       in the first two seconds, burned-in captions, colour, pacing and a
+       call to action.
+
+       Both sides are drawn in CSS, so this ships with no assets. To use a
+       real before/after still, swap the two .cmp-scene elements for <img>
+       tags; everything else keeps working.
+       =================================================================== -->
+  <section id="craft" class="py-24 sm:py-32">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6 grid lg:grid-cols-[1fr_.8fr] gap-12 lg:gap-16 items-center">
+
+      <div class="reveal">
+        <p class="eyebrow">The difference</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Same clip. <span class="sweep">One of them gets watched.</span></h2>
+        <p class="muted text-lg mt-4">Most footage is fine. What decides whether anyone sees it is the first two seconds, the captions, and the pacing in between — the part your audience never consciously notices.</p>
+
+        <!-- Spells out exactly what is being added, so the demo is not
+             just a visual trick — each line maps to a real deliverable. -->
+        <ul class="grid gap-3 mt-7">
+          <li class="flex gap-3"><i data-lucide="zap" class="w-5 h-5 accent shrink-0 mt-0.5"></i><span><b>A hook in the first 2 seconds</b> — the only part most people watch.</span></li>
+          <li class="flex gap-3"><i data-lucide="type" class="w-5 h-5 accent shrink-0 mt-0.5"></i><span><b>Burned-in captions</b> — most feeds play on mute by default.</span></li>
+          <li class="flex gap-3"><i data-lucide="scissors" class="w-5 h-5 accent shrink-0 mt-0.5"></i><span><b>Pacing and colour</b> — dead air cut, the subject lifted.</span></li>
+          <li class="flex gap-3"><i data-lucide="megaphone" class="w-5 h-5 accent shrink-0 mt-0.5"></i><span><b>A call to action</b> — so the view turns into an enquiry.</span></li>
+        </ul>
+
+        <p class="muted text-sm mt-7 flex items-center gap-2"><i data-lucide="move-horizontal" class="w-4 h-4 accent"></i> Drag the slider — or use the arrow keys.</p>
+      </div>
+
+      <!-- The frame itself. --pos is the seam position in percent; the
+           range input writes it on every move. -->
+      <div class="mx-auto w-full max-w-[330px] reveal">
+        <div class="compare" style="--pos:52%">
+
+          <!-- Layer 1: the raw clip, dulled by a CSS filter. -->
+          <div class="cmp-layer cmp-raw" aria-hidden="true">
+            <div class="cmp-scene"></div>
+            <span class="cmp-file">IMG_4821.MOV</span>
+            <div class="cmp-flat"></div>
+            <span class="cmp-tag cmp-tag-raw">YOUR RAW CLIP</span>
+          </div>
+
+          <!-- Layer 2: the edit, clipped to the left of the seam. -->
+          <div class="cmp-layer cmp-edit" aria-hidden="true">
+            <div class="cmp-scene cmp-scene-lit"></div>
+            <span class="cmp-hook">HOOK &middot; 0&#8211;2s</span>
+            <div class="cmp-caption">
+              <b>STOP</b><b class="accent">SCROLLING</b><em>&#8212; here's why</em>
+            </div>
+            <span class="cmp-cta">Book a call &#8594;</span>
+            <div class="cmp-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="cmp-tag cmp-tag-edit">BOLDX EDIT</span>
+          </div>
+
+          <!-- The visible seam. It cannot be clicked; the input handles that. -->
+          <div class="cmp-divider" style="left:52%"><span class="cmp-grab">&#8646;</span></div>
+
+          <!-- The actual control. Invisible, but a real range input, so it
+               is draggable, tappable AND keyboard operable for free. -->
+          <input class="cmp-range" id="cmpRange" type="range" min="0" max="100" value="52" aria-label="Drag to compare the raw clip with the edited version" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       POSITIONING STATEMENT
+       The single line that separates this service from a freelance
+       editor, given a section of its own.
+
+       The words light up as the block crosses the screen, which slows the
+       reader down just enough to take the sentence in.
+       =================================================================== -->
+  <section class="py-20 sm:py-28" style="background:var(--bg2)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+      <p class="eyebrow reveal">Where we fit</p>
+      <!-- data-key lists the words to paint in the accent colour. -->
+      <p class="hl-line mt-5" id="hlLine" data-key="short-form,department.">We are not another editing service. We are your short-form department.</p>
+      <p class="muted text-lg mt-6 max-w-xl reveal">Your editor stays focused on your longform. We find the moments, cut them, write the captions and CTAs, and drive viewers to your offer.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SERVICES
+       Two services. Editing is the lead offer, so it comes first and
+       carries the badge.
+       =================================================================== -->
+  <section id="services" class="py-24 sm:py-32">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">What we do</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Two services. <span class="sweep">One short-form system.</span></h2>
+        <p class="muted text-lg mt-4">Pick editing, strategy, or both. We run the whole system — finding the moments, editing, writing captions and CTAs, and driving viewers to your offer — so your editor can stay focused on your longform.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-5 mt-12">
+
+        <!-- Service 1: video editing (the headline offer) -->
+        <article class="card p-8 sm:p-10 reveal relative overflow-hidden">
+          <!-- Positioned badge. The .card > .absolute rule in the stylesheet
+               is what keeps this pinned to the corner above the glow. -->
+          <span class="absolute top-6 right-6 text-xs font-bold rounded-full px-3 py-1" style="background:var(--accent);color:#fff">Most popular</span>
+          <div class="w-12 h-12 rounded-2xl grid place-items-center mb-6" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="clapperboard" class="w-6 h-6"></i></div>
+          <h3 class="text-2xl font-bold">Video Editing</h3>
+          <p class="muted mt-3">Your raw clips, edited into polished short-form videos — ready to post.</p>
+          <ul class="mt-6 grid gap-3">
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Scroll-stopping hooks and pacing</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Captions, visuals and calls to action included</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Posting support, depending on your plan</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>You never edit a thing</li>
+          </ul>
+        </article>
+
+        <!-- Service 2: content strategy -->
+        <article class="card p-8 sm:p-10 reveal">
+          <div class="w-12 h-12 rounded-2xl grid place-items-center mb-6" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="lightbulb" class="w-6 h-6"></i></div>
+          <h3 class="text-2xl font-bold">Content Strategy</h3>
+          <p class="muted mt-3">Niche-specific ideas and structure, so you always know what to make and why.</p>
+          <ul class="mt-6 grid gap-3">
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Topic and content ideas for your niche</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Hooks, scripts and calls to action</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>You record — we guide the structure</li>
+            <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Pair it with editing whenever you like</li>
+          </ul>
+        </article>
+      </div>
+
+      <!-- ---- Plan picker ----
+           Lets the visitor choose a service rather than reading about the
+           options in prose, and carries that choice into the enquiry form
+           so they never state it twice. Prices are not published, so each
+           panel ends in a conversation rather than a number. -->
+      <div class="card p-6 sm:p-9 mt-5 reveal" id="planPicker">
+        <div class="flex flex-wrap items-center gap-4 justify-between">
+          <div>
+            <p class="font-bold text-xl">Build your plan</p>
+            <p class="muted text-sm mt-1">Pick what you need — we'll shape the rest around it.</p>
+          </div>
+          <!-- data-plan matches the radio values in the enquiry form. -->
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Choose a plan">
+            <button class="chip on" data-plan="Video editing" role="tab" aria-selected="true">Editing</button>
+            <button class="chip" data-plan="Content strategy" role="tab" aria-selected="false">Strategy</button>
+            <button class="chip" data-plan="Both" role="tab" aria-selected="false">Both</button>
+          </div>
+        </div>
+
+        <div class="mt-7">
+          <!-- One panel per choice; only the .on panel is displayed. -->
+          <div class="plan-panel on" data-panel="Video editing">
+            <p class="text-lg"><b>You send raw clips. We send back posts.</b></p>
+            <ul class="grid sm:grid-cols-2 gap-3 mt-4 muted">
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Hooks, pacing and colour</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Captions and calls to action</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Delivered ready to post</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Posting handled, if you want it</li>
+            </ul>
+          </div>
+          <div class="plan-panel" data-panel="Content strategy">
+            <p class="text-lg"><b>You film with a plan instead of guessing.</b></p>
+            <ul class="grid sm:grid-cols-2 gap-3 mt-4 muted">
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Content ideas for your niche</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Hooks and scripts written for you</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Calls to action that fit your offer</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>You record — we guide the structure</li>
+            </ul>
+          </div>
+          <div class="plan-panel" data-panel="Both">
+            <p class="text-lg"><b>The whole short-form system, run for you.</b></p>
+            <ul class="grid sm:grid-cols-2 gap-3 mt-4 muted">
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Everything in both services</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Ideas, scripts, edits and captions</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>A consistent posting rhythm</li>
+              <li class="flex gap-3"><i data-lucide="check" class="w-5 h-5 accent shrink-0 mt-0.5"></i>Your editor keeps the longform</li>
+            </ul>
+          </div>
+
+          <!-- The script writes the chosen plan into this button's label
+               and pre-selects it in the enquiry form. -->
+          <div class="flex flex-wrap items-center gap-4 mt-7">
+            <a href="#contact" class="btn btn-primary" id="planCta">Start a chat about editing <i data-lucide="arrow-right" class="w-5 h-5"></i></a>
+            <p class="muted text-sm">Plans are tailored to you and agreed in a personal chat.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       WORK
+       PLACEHOLDER IMAGERY: these four tiles use stock photos. Swap each
+       src for a real reel still and update the label and title beneath
+       it. data-type drives the filter buttons — keep it matching one of
+       the data-filter values below.
+       =================================================================== -->
+  <section id="work" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="flex flex-wrap items-end justify-between gap-6 reveal">
+        <div class="max-w-2xl">
+          <p class="eyebrow">Our work</p>
+          <h2 class="h-display text-4xl sm:text-5xl mt-3">Edits built to be <span class="sweep">watched to the end.</span></h2>
+        </div>
+        <!-- Filter buttons. data-filter="all" shows everything; the others
+             match a tile's data-type. -->
+        <div class="flex gap-2" role="tablist" aria-label="Filter work">
+          <button class="chip on" data-filter="all" role="tab">All</button>
+          <button class="chip" data-filter="edit" role="tab">Editing</button>
+          <button class="chip" data-filter="strategy" role="tab">Strategy</button>
+        </div>
+      </div>
+
+      <p class="muted mt-3 reveal"><span class="tag-placeholder">Placeholder</span> Swap these tiles for your real reels and page screenshots.</p>
+
+      <!-- loading="lazy" defers off-screen images; onerror hides a broken
+           one so the tile falls back to its dark gradient rather than
+           showing a broken-image icon. -->
+      <div id="reels" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-10">
+        <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" data-type="edit" class="reel group reveal">
+          <img loading="lazy" alt="Sample reel — talking-head edit" src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=600&q=80" onerror="this.style.display='none'" />
+          <div class="shade"></div><div class="absolute bottom-4 left-4 right-4 text-white"><p class="text-xs opacity-80">Editing</p><p class="font-bold">Talking-head reel</p></div>
+        </a>
+        <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" data-type="strategy" class="reel group reveal">
+          <img loading="lazy" alt="Sample reel — strategy and scripting" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80" onerror="this.style.display='none'" />
+          <div class="shade"></div><div class="absolute bottom-4 left-4 right-4 text-white"><p class="text-xs opacity-80">Strategy</p><p class="font-bold">Script + hook pack</p></div>
+        </a>
+        <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" data-type="edit" class="reel group reveal">
+          <img loading="lazy" alt="Sample reel — captions and visuals" src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80" onerror="this.style.display='none'" />
+          <div class="shade"></div><div class="absolute bottom-4 left-4 right-4 text-white"><p class="text-xs opacity-80">Editing</p><p class="font-bold">Captions + visuals</p></div>
+        </a>
+        <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" data-type="strategy" class="reel group reveal">
+          <img loading="lazy" alt="Sample reel — niche content plan" src="https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&w=600&q=80" onerror="this.style.display='none'" />
+          <div class="shade"></div><div class="absolute bottom-4 left-4 right-4 text-white"><p class="text-xs opacity-80">Strategy</p><p class="font-bold">Niche content plan</p></div>
+        </a>
+      </div>
+
+      <!-- The Instagram glyph is drawn inline rather than pulled from the
+           icon library, which renders it blank at this size. -->
+      <div class="text-center mt-10 reveal"><a class="btn btn-ghost" href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg> See more on @boldx.io</a></div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       RESULTS
+       The headline figures, then the differentiators. No case studies are
+       shown while there are no real results to publish — invented ones
+       are the fastest way to lose a prospect's trust. Replace the lower
+       tiles with genuine before/after numbers once they exist.
+       =================================================================== -->
+  <section id="results" class="py-24 sm:py-32">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">Experience &amp; results</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Years of building <span class="sweep">pages that grow.</span></h2>
+        <p class="muted text-lg mt-4">We've spent the past 2–3 years building established Instagram pages and shaping content across different niches — so we understand how this space works.</p>
+      </div>
+
+      <!-- ---- Bento grid ----
+           Proof laid out as tiles of unequal weight rather than a row of
+           identical boxes: the views figure is the strongest number on the
+           page, so it takes a tile four times the size of the others and
+           the eye lands on it first.
+
+           The counters animate on scroll; see the [data-count] handler. -->
+      <div class="bento mt-12">
+
+        <!-- The headline figure. The aurora drifts behind it, and the
+             bars below draw themselves the moment the tile reveals, so
+             the number counting up and the chart filling read as one
+             gesture. Bar heights are arbitrary and illustrative — they
+             show a rising trend, not month-by-month data. -->
+        <div class="card b-hero p-7 sm:p-9 reveal relative overflow-hidden">
+          <div class="aurora absolute" aria-hidden="true"></div>
+          <div>
+            <p class="eyebrow">Views generated</p>
+            <p class="b-num mt-4"><span data-count="850" data-suffix="M+">0</span></p>
+            <p class="muted mt-4 max-w-xs">Across the Instagram pages we've built and run over the past two to three years.</p>
+          </div>
+          <div class="spark" aria-hidden="true">
+            <i style="--h:16%"></i><i style="--h:24%"></i><i style="--h:19%"></i><i style="--h:33%"></i>
+            <i style="--h:41%"></i><i style="--h:36%"></i><i style="--h:52%"></i><i style="--h:61%"></i>
+            <i style="--h:55%"></i><i style="--h:74%"></i><i style="--h:88%"></i><i style="--h:100%"></i>
+          </div>
+        </div>
+
+        <!-- Brands served. -->
+        <div class="card p-6 sm:p-7 reveal">
+          <div>
+            <p class="eyebrow">Brands served</p>
+            <p class="b-sub mt-3 accent"><span data-count="67" data-suffix="+">0</span></p>
+          </div>
+          <p class="muted text-sm mt-4">Creators, coaches, consultants and niche businesses.</p>
+          <div class="tile-rule" aria-hidden="true"></div>
+        </div>
+
+        <!-- Time in the space. Written as a range, so not animated. -->
+        <div class="card p-6 sm:p-7 reveal">
+          <div>
+            <p class="eyebrow">In short-form</p>
+            <p class="b-sub mt-3 accent">2&#8211;3 yrs</p>
+          </div>
+          <p class="muted text-sm mt-4">Hands-on across multiple niches, not one.</p>
+          <div class="tile-rule" aria-hidden="true"></div>
+        </div>
+
+        <!-- The positioning line again, in its short form. This is the
+             tile most likely to win a sceptical reader. -->
+        <div class="card b-wide p-6 sm:p-8 reveal">
+          <div class="tile-ico w-11 h-11 rounded-2xl grid place-items-center mb-4" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="layers" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="font-bold text-xl">The whole system, not just edits</h3>
+            <p class="muted mt-2">We find the moments, cut them, write the captions and CTAs, and point viewers at your offer. Your longform editor keeps their lane.</p>
+            <div class="tile-rule" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <!-- Reach / working hours. -->
+        <div class="card b-half p-6 sm:p-7 reveal">
+          <div class="tile-ico w-11 h-11 rounded-2xl grid place-items-center mb-4" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="globe" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="font-bold text-lg">Working worldwide</h3>
+            <p class="muted text-sm mt-2">Remote by default, in English, across time zones.</p>
+          </div>
+        </div>
+
+        <!-- What actually lands in their inbox. -->
+        <div class="card b-half p-6 sm:p-7 reveal">
+          <div class="tile-ico w-11 h-11 rounded-2xl grid place-items-center mb-4" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="package-check" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="font-bold text-lg">Ready to post</h3>
+            <p class="muted text-sm mt-2">Captions and CTAs included. You just hit upload.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       PROCESS
+       Four steps, from first message to published video. An <ol> because
+       the order is the point.
+       =================================================================== -->
+  <section id="process" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">How it works</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">From first chat to <span class="sweep">ready-to-post.</span></h2>
+      </div>
+      <!-- ---- Process rail ----
+           The four steps are one journey, so they sit on a line that fills
+           as you scroll and lights each dot in turn, rather than reading
+           as four disconnected cards. The rail runs vertically on phones
+           (where the steps stack) and horizontally from md up — see the
+           .rail rules in the stylesheet. -->
+      <div class="rail mt-12" id="rail">
+        <div class="rail-track" aria-hidden="true"></div>
+        <div class="rail-fill" aria-hidden="true"></div>
+        <ol class="grid gap-9 md:grid-cols-4 md:gap-6 relative">
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">01</span>
+            <h3 class="font-bold text-xl">Start a chat</h3>
+            <p class="muted mt-2">Tell us about your business, goals and the content you need.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">02</span>
+            <h3 class="font-bold text-xl">Agree a plan</h3>
+            <p class="muted mt-2">We confirm exactly what's included — editing, strategy or both.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">03</span>
+            <h3 class="font-bold text-xl">Send raw clips</h3>
+            <p class="muted mt-2">That's all we need to begin. You never edit a thing.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">04</span>
+            <h3 class="font-bold text-xl">Post &amp; grow</h3>
+            <p class="muted mt-2">Every edit arrives ready to post, with captions and CTAs included.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       CONCERNS
+       Sits where testimonials normally would. Invented quotes on a
+       trust-building page are worse than none, so this answers the three
+       doubts prospects raise before buying instead. Replace with genuine
+       testimonials once they exist.
+       =================================================================== -->
+  <section class="py-24 sm:py-32">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">Before you start</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">The three things <span class="sweep">people ask us first.</span></h2>
+        <p class="muted text-lg mt-4">Handing over your footage is a big ask. Here's where we stand on it.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5 mt-12">
+        <div class="card p-8 reveal">
+          <div class="w-11 h-11 rounded-2xl grid place-items-center mb-5" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="help-circle" class="w-5 h-5"></i></div>
+          <h3 class="font-bold text-xl">“Will better editing really change anything?”</h3>
+          <p class="muted mt-3">The first two seconds decide whether anyone watches. Stronger hooks, tighter pacing and clearer visuals are what make more of the right people stop — the same content, cut properly.</p>
+        </div>
+        <div class="card p-8 reveal">
+          <div class="w-11 h-11 rounded-2xl grid place-items-center mb-5" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="target" class="w-5 h-5"></i></div>
+          <h3 class="font-bold text-xl">“Will you understand my niche?”</h3>
+          <p class="muted mt-3">We've spent 2–3 years building pages across different niches and generating 850M+ views. We start by learning your business and your goals before a single cut is made.</p>
+        </div>
+        <div class="card p-8 reveal">
+          <div class="w-11 h-11 rounded-2xl grid place-items-center mb-5" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+          <h3 class="font-bold text-xl">“Can I trust you with my footage?”</h3>
+          <p class="muted mt-3">Your raw clips are used for your edits and nothing else. You approve what goes out, and every delivery arrives ready to post — you stay in control of your brand.</p>
+        </div>
+      </div>
+
+      <!-- Low-commitment offer for anyone still hesitating. -->
+      <div class="card p-8 sm:p-10 mt-5 reveal flex flex-wrap items-center justify-between gap-6">
+        <div>
+          <p class="font-bold text-2xl">Still deciding? Start with one video.</p>
+          <p class="muted mt-2">Send a few raw clips and see the difference before committing to anything.</p>
+        </div>
+        <a href="#contact" class="btn btn-primary">Start a chat <i data-lucide="arrow-right" class="w-5 h-5"></i></a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       FAQ
+       The questions that come up most often before a first call. Each row
+       is: .faq wrapper > button + .faq-body.
+       To add one, copy a whole .faq block — the script picks it up with no
+       further wiring.
+       =================================================================== -->
+  <section id="faq" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-3xl mx-auto px-5 sm:px-6">
+
+      <div class="reveal text-center">
+        <p class="eyebrow">FAQ</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Questions we hear most.</h2>
+      </div>
+
+      <div class="mt-10 grid gap-3" id="faqList">
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Can I choose editing only, strategy only, or both?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">Yes. Choose video editing, content strategy, or both, depending on what you need.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">How does the process work after I start a chat?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">We'll talk with you to understand your business, your goals and the kind of content you need. Then we agree on a plan, coordinate the work with our editors and help with your content. If posting is included in your plan, we handle that too.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">What do you need from me to get started?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">Access to your raw clips and footage. That's it. You never edit a thing.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Do you post the videos for me?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">We can edit your videos and help with posting, depending on the plan we agree on — we'll confirm exactly what's included. Every edit is delivered ready to post, with captions and CTAs, so you or your team just hit upload.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Will this actually make a difference — and do you understand my niche?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">We've spent 2–3 years building established Instagram pages across different niches, generating 850M+ views. Stronger hooks, editing and structure help more of the right people stop and watch.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">What does it cost?<i data-lucide="plus" class="faq-icon w-5 h-5 accent shrink-0"></i></button><div class="faq-body"><div><p class="muted px-5 pb-5">Plans are tailored to your needs and agreed in a personal chat — start one below.</p></div></div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       CONTACT
+       A three-step enquiry form. Asking for everything at once suppresses
+       completions, so step 1 is a single easy choice and the email address
+       is only requested at step 2.
+
+       IMPORTANT — THERE IS NO BACKEND. Submitting opens the visitor's own
+       email client with the details pre-filled. That works, but it loses
+       anyone without a configured mail app. Before launch, point this at
+       Formspree, Resend or similar: see the submit handler in the script.
+       =================================================================== -->
+  <section id="contact" class="py-24 sm:py-32 relative grain overflow-hidden">
+    <div class="relative max-w-3xl mx-auto px-5 sm:px-6">
+
+      <div class="text-center reveal">
+        <p class="eyebrow">Let's talk</p>
+        <h2 class="h-display text-4xl sm:text-6xl mt-3">Ready to turn raw footage into <span class="sweep">growth?</span></h2>
+        <p class="muted text-lg mt-4">Tell us a little about you. Three quick steps — we'll reply to start the conversation.</p>
+      </div>
+
+      <!-- novalidate turns off the browser's own popups so the script can
+           show its own message in the page's styling. -->
+      <form id="leadForm" class="glass rounded-3xl p-6 sm:p-10 mt-10 reveal" novalidate>
+
+        <!-- Progress bars; filled from JS as the visitor advances. -->
+        <div class="flex gap-2 mb-8" aria-hidden="true">
+          <span class="h-1.5 flex-1 rounded-full step-bar" style="background:var(--accent)"></span>
+          <span class="h-1.5 flex-1 rounded-full step-bar" style="background:var(--line)"></span>
+          <span class="h-1.5 flex-1 rounded-full step-bar" style="background:var(--line)"></span>
+        </div>
+
+        <!-- Step 1: one tap, no typing required to get started. The radio
+             inputs are visually hidden (sr-only) but still focusable; the
+             chip beside each is styled by the input:checked + .chip rule. -->
+        <div class="step" data-step="1">
+          <h3 class="text-2xl font-bold">What do you need?</h3>
+          <div class="grid sm:grid-cols-3 gap-3 mt-5">
+            <label><input type="radio" name="service" value="Video editing" class="sr-only" checked><span class="chip block text-center">Video editing</span></label>
+            <label><input type="radio" name="service" value="Content strategy" class="sr-only"><span class="chip block text-center">Content strategy</span></label>
+            <label><input type="radio" name="service" value="Both" class="sr-only"><span class="chip block text-center">Both</span></label>
+          </div>
+          <label class="block mt-6 font-semibold" for="niche">Your niche or business</label>
+          <input id="niche" name="niche" class="field mt-2" placeholder="e.g. fitness coach, consultant, SaaS founder" />
+        </div>
+
+        <!-- Step 2: the only required fields. autocomplete lets browsers
+             fill these from the visitor's saved details. -->
+        <div class="step hidden" data-step="2">
+          <h3 class="text-2xl font-bold">About you</h3>
+          <label class="block mt-5 font-semibold" for="name">Name *</label>
+          <input id="name" name="name" class="field mt-2" autocomplete="name" required />
+          <label class="block mt-5 font-semibold" for="email">Email *</label>
+          <input id="email" name="email" type="email" class="field mt-2" autocomplete="email" required />
+          <label class="block mt-5 font-semibold" for="handle">Instagram handle or website</label>
+          <input id="handle" name="handle" class="field mt-2" placeholder="@yourhandle" />
+          <!-- role="alert" makes screen readers announce this the moment
+               the script fills it in. -->
+          <p id="err" class="text-sm mt-4 hidden" style="color:#ff6b6b" role="alert"></p>
+        </div>
+
+        <!-- Step 3: optional context. -->
+        <div class="step hidden" data-step="3">
+          <h3 class="text-2xl font-bold">Anything else?</h3>
+          <label class="block mt-5 font-semibold" for="msg">Tell us about your goals</label>
+          <textarea id="msg" name="msg" rows="5" class="field mt-2" placeholder="What are you posting now, and what would you like to improve?"></textarea>
+          <p class="muted text-sm mt-3">Submitting opens your email app with this message ready to send to our team.</p>
+        </div>
+
+        <!-- type="button" on both, so neither triggers a native form submit;
+             the script owns the navigation. Back is invisible (not hidden)
+             on step 1, which keeps Next pinned to the right. -->
+        <div class="flex justify-between gap-3 mt-8">
+          <button type="button" id="prev" class="btn btn-ghost invisible"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
+          <button type="button" id="next" class="btn btn-primary">Next <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+        </div>
+      </form>
+
+      <!-- Shown in place of the form after submitting, with the address
+           repeated in case the email client never opened. -->
+      <div id="thanks" class="glass rounded-3xl p-10 mt-10 text-center hidden">
+        <div class="w-14 h-14 mx-auto rounded-2xl grid place-items-center" style="background:var(--accent);color:#fff"><i data-lucide="check" class="w-7 h-7"></i></div>
+        <h3 class="text-2xl font-bold mt-5">Almost there!</h3>
+        <p class="muted mt-2">Your email app should have opened. If not, write to <a class="accent font-bold" href="mailto:Boldx.iobusiness@gmail.com">Boldx.iobusiness@gmail.com</a> or DM us on Instagram.</p>
+      </div>
+    </div>
+  </section>
+  </main>
+
+
+  <!-- ===================================================================
+       FOOTER
+       Closing call to action, then four columns of links.
+       TO DO: the Privacy Policy and Terms links point at "#" and need real
+       pages — they are legally required in most markets.
+       =================================================================== -->
+  <footer class="relative overflow-hidden pt-20 pb-10" style="background:var(--bg2);border-top:1px solid var(--line)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <!-- Full-width accent band: the last chance to convert. -->
+      <div class="relative rounded-3xl p-8 sm:p-12 overflow-hidden reveal" style="background:var(--accent);color:#fff">
+        <!-- Blurred white circle that lifts the flat orange. -->
+        <div class="absolute -right-16 -top-20 w-72 h-72 rounded-full opacity-25" style="background:#fff;filter:blur(60px)"></div>
+        <div class="relative flex flex-wrap items-center justify-between gap-8">
+          <div class="max-w-lg">
+            <h2 class="h-display text-3xl sm:text-4xl">Your next video could be the one that lands.</h2>
+            <p class="mt-3 opacity-90">Send your raw clips. We'll handle the rest — hooks, edits, captions and CTAs, ready to post.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a href="#contact" class="btn" style="background:#101011;color:#fff">Start a chat <i data-lucide="arrow-right" class="w-5 h-5"></i></a>
+            <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" class="btn" style="border:1px solid rgba(255,255,255,.55);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg> @boldx.io</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Link columns: one per row on phones, a 2x2 block on tablets,
+           four across from 1024px. The link lists use .footer-links rather
+           than a gap utility — see the stylesheet for why that matters. -->
+      <div class="grid gap-y-10 gap-x-8 sm:grid-cols-2 lg:gap-12 lg:grid-cols-[1.5fr_.75fr_.75fr_1.3fr] mt-16">
+
+        <!-- Brand column. The -ml-2 pulls ".io" tight against "Boldx", so
+             the two spans must stay on one line with no space between. -->
+        <div>
+          <a href="#top" class="flex items-center gap-2 font-bold text-2xl" aria-label="Boldx.io home">
+            <span class="w-9 h-9 rounded-xl grid place-items-center text-lg" style="background:var(--accent);color:#fff">B</span>
+            Boldx<span class="accent -ml-2">.io</span>
+          </a>
+          <p class="muted mt-4 max-w-xs text-lg">Sharp edits. Clear strategy. Consistent content.</p>
+          <p class="muted mt-4 text-sm flex items-center gap-2"><i data-lucide="globe" class="w-4 h-4 accent"></i> Working worldwide · English</p>
+          <div class="flex gap-3 mt-6">
+            <a class="btn btn-ghost !p-0 w-11 h-11" href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" aria-label="Boldx.io on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg></a>
+            <a class="btn btn-ghost !p-0 w-11 h-11" href="mailto:Boldx.iobusiness@gmail.com" aria-label="Email Boldx.io"><i data-lucide="mail" class="w-5 h-5"></i></a>
+          </div>
+        </div>
+
+        <nav aria-label="Pages">
+          <p class="footer-head">Explore</p>
+          <ul class="footer-links muted">
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Services</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#work">Work</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#results">Results</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#process">Process</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Services">
+          <p class="footer-head">What we do</p>
+          <ul class="footer-links muted">
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Video editing</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Content strategy</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#faq">FAQ</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#contact">Start a chat</a></li>
+          </ul>
+        </nav>
+
+        <!-- Newsletter. Front-end only: the script just validates and
+             confirms. Wire it to a real list before promising anything. -->
+        <div>
+          <p class="footer-head">Short-form tips</p>
+          <p class="muted mb-4 max-w-sm">Occasional notes on hooks, pacing and what's working on Reels right now.</p>
+          <form id="news" class="flex gap-2" novalidate>
+            <label class="sr-only" for="nemail">Email address</label>
+            <input id="nemail" type="email" class="field" placeholder="you@email.com" autocomplete="email" />
+            <button class="btn btn-primary shrink-0" type="submit" aria-label="Join the list">Join</button>
+          </form>
+          <!-- min-h reserves the line so nothing shifts when the message
+               appears. role="status" announces it politely. -->
+          <p id="nmsg" class="text-sm muted mt-3 min-h-[1.25rem]" role="status"></p>
+        </div>
+      </div>
+
+      <!-- Legal line. The year is filled in by script so it never goes
+           stale. Keep the spans inline or the spacing changes. -->
+      <div class="mt-14 pt-6 flex flex-wrap items-center justify-between gap-4 text-sm muted" style="border-top:1px solid var(--line)">
+        <p>© <span id="yr"></span> Boldx.io · <a class="hover:text-[var(--text)] transition" href="mailto:Boldx.iobusiness@gmail.com">Boldx.iobusiness@gmail.com</a></p>
+        <p class="flex gap-5"><a class="hover:text-[var(--text)] transition" href="#">Privacy Policy</a><a class="hover:text-[var(--text)] transition" href="#">Terms</a></p>
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- =====================================================================
+       8. SCRIPT
+       Plain JavaScript, no framework. The script sits at the end of <body>
+       so every element it reaches for already exists — which is why there
+       is no DOMContentLoaded wrapper.
+
+       Two flags, REDUCED and FINE, gate most of what follows:
+         REDUCED  the visitor asked their OS to reduce motion
+         FINE     there is a real mouse (not a finger) driving the page
+       Anything decorative checks these before it runs, so phones are not
+       asked to track a cursor that does not exist.
+       ===================================================================== -->
+  <script>
+
+    /* ---- Start-up ---------------------------------------------------- */
+
+    // Replaces every <i data-lucide="..."> in the markup with its SVG.
+    // Must be called again any time new icon markup is inserted later.
+    lucide.createIcons();
+
+    // Copyright year, so the footer never goes out of date.
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    // The address enquiries are sent to. Change it here, and in the two
+    // mailto: links in the markup.
+    const EMAIL = 'Boldx.iobusiness@gmail.com';
+
+
+    /* ---- Theme toggle -------------------------------------------------
+       Dark is the default. The choice is remembered in localStorage, which
+       is wrapped in try/catch because it throws in private-browsing modes
+       and when cookies are blocked — a failure there must not take the
+       rest of the page down with it. */
+
+    /* Declared here rather than further down because setTheme consults
+       REDUCED, and the first call happens immediately below. */
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const FINE = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    const root = document.documentElement,
+          themeBtn = document.getElementById('themeBtn');
+
+    function applyTheme(t) {
+      // One attribute on <html> re-points every colour variable.
+      root.setAttribute('data-theme', t);
+      try { localStorage.setItem('bx-theme', t); } catch (e) {}
+      // Show the icon for the mode you would switch TO.
+      themeBtn.innerHTML = '<i data-lucide="' + (t === 'dark' ? 'sun' : 'moon') + '" class="w-5 h-5"></i>';
+      lucide.createIcons();   // render the icon just inserted
+    }
+
+    /* Switches the theme. When an event is passed and the browser supports
+       View Transitions, the new palette is revealed by a circle growing
+       out of the toggle button, so the change has a source rather than
+       just happening. Everywhere else — on first load, under reduced
+       motion, or in a browser without the API — it applies instantly,
+       which is exactly what it did before. */
+    function setTheme(t, ev) {
+      if (!ev || REDUCED || !document.startViewTransition) { applyTheme(t); return; }
+
+      // Start from the centre of the button that was clicked.
+      const r = themeBtn.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      // Radius needed to reach the furthest corner of the viewport.
+      const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+
+      const vt = document.startViewTransition(() => applyTheme(t));
+      vt.ready.then(() => {
+        document.documentElement.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`] },
+          { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)', pseudoElement: '::view-transition-new(root)' }
+        );
+      }).catch(() => {});   // a cancelled transition is not an error
+    }
+
+    let saved = null;
+    try { saved = localStorage.getItem('bx-theme'); } catch (e) {}
+    setTheme(saved || 'dark');
+
+    themeBtn.addEventListener('click', ev =>
+      setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', ev)
+    );
+
+
+    /* ---- Mobile menu --------------------------------------------------- */
+
+    const menuBtn = document.getElementById('menuBtn'),
+          mm = document.getElementById('mobileMenu');
+
+    menuBtn.addEventListener('click', () => {
+      // classList.toggle returns whether the class is now present, so
+      // "=== false" reads as "the menu is now open".
+      const open = mm.classList.toggle('hidden') === false;
+      menuBtn.setAttribute('aria-expanded', open);
+    });
+
+    // Close the menu after tapping any link inside it, otherwise it stays
+    // open over the section the visitor just jumped to.
+    mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      mm.classList.add('hidden');
+      menuBtn.setAttribute('aria-expanded', false);
+    }));
+
+
+    /* ---- Scroll reveal, with stagger -----------------------------------
+       Elements marked .reveal fade in when scrolled to. Items sharing a
+       parent are delayed 90ms apart so a row of cards arrives in sequence
+       rather than all at once. The delay is capped at 6 steps, so a long
+       list never leaves the last item waiting. */
+
+    const groups = new Map();   // parent element -> how many seen so far
+
+    document.querySelectorAll('.reveal').forEach(el => {
+      const p = el.parentElement;
+      if (!groups.has(p)) groups.set(p, 0);
+      const i = groups.get(p);
+      groups.set(p, i + 1);
+      if (!REDUCED) el.style.transitionDelay = Math.min(i, 6) * 90 + 'ms';
+    });
+
+    // threshold .12 fires once about an eighth of the element is visible.
+    // Each element is unobserved after revealing — it only animates once.
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    }), { threshold: .12 });
+
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+
+    /* ---- Headline, word by word -----------------------------------------
+       Wraps each word of the <h1> in <span class="w"> and gives it a rising
+       delay, so the headline assembles itself on load.
+
+       Why a recursive text-node walk rather than innerHTML: the headline
+       contains a coloured <span>, and rewriting innerHTML would flatten it.
+       This visits text nodes only (nodeType 3) and leaves elements intact.
+       Splitting on /(\s+)/ keeps the whitespace as its own array entry, so
+       the spaces between words survive. */
+
+    const h1 = document.querySelector('h1.h-display');
+
+    if (h1 && !REDUCED) {
+      // Hand control to the per-word animation: drop the block-level
+      // reveal, otherwise both would fight over the same opacity.
+      h1.classList.remove('reveal');
+      h1.style.opacity = 1;
+      h1.style.transform = 'none';
+
+      (function split(node) {
+        [...node.childNodes].forEach(n => {
+          if (n.nodeType === 3) {                 // a text node
+            const frag = document.createDocumentFragment();
+            n.textContent.split(/(\s+)/).forEach(part => {
+              if (!part.trim()) {                 // whitespace: keep as-is
+                frag.appendChild(document.createTextNode(part));
+                return;
+              }
+              const s = document.createElement('span');
+              s.className = 'w';
+              s.textContent = part;
+              frag.appendChild(s);
+            });
+            n.replaceWith(frag);
+          } else if (n.nodeType === 1) {          // an element: recurse
+            split(n);
+          }
+        });
+      })(h1);
+
+      // 120ms before the first word, then 55ms between each.
+      h1.querySelectorAll('.w').forEach((w, i) =>
+        w.style.animationDelay = (120 + i * 55) + 'ms'
+      );
+    }
+
+
+    /* ---- Scroll handler -------------------------------------------------
+       One listener drives three things: the progress bar, the auto-hiding
+       nav, and the parallax drift. Scroll events fire faster than the
+       screen refreshes, so the work is deferred to requestAnimationFrame
+       and the "ticking" flag drops any extra events in between. passive
+       tells the browser we will never preventDefault, which keeps
+       scrolling smooth. */
+
+    const bar = document.getElementById('progress');
+    const head = document.querySelector('header');
+    let lastY = 0, ticking = false;
+
+    // The two scroll-driven sections further down (the statement and the
+    // process rail) are wired up later in this script, but onScroll runs
+    // before that. Deliberately "var": it is hoisted and starts undefined,
+    // so reading it here is safe, whereas touching a let/const before its
+    // declaration throws and would take the rest of the script with it.
+    var extrasReady = false;
+
+    function onScroll() {
+      const y = window.scrollY,
+            max = document.body.scrollHeight - innerHeight;
+
+      // Progress bar. The max > 0 guard avoids dividing by zero on a page
+      // shorter than the window.
+      bar.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
+
+      // Hide the nav when scrolling DOWN, past 320px, and only while the
+      // mobile menu is shut and nothing inside it holds focus — hiding the
+      // bar under a keyboard user's focus would strand them.
+      if (!REDUCED) head.classList.toggle('hide',
+        y > lastY && y > 320 && !mm.contains(document.activeElement) && mm.classList.contains('hidden'));
+
+      lastY = y;
+
+      // Parallax. Offset is measured from the element's distance to the
+      // centre of the screen, so it reads zero as it passes the middle and
+      // drifts in opposite directions either side. data-para is the
+      // strength; negative moves against the scroll.
+      if (!REDUCED) document.querySelectorAll('[data-para]').forEach(el => {
+        const r = el.getBoundingClientRect(),
+              mid = r.top + r.height / 2 - innerHeight / 2;
+        el.style.translate = '0 ' + (mid * +el.dataset.para).toFixed(1) + 'px';
+      });
+
+      // Scroll-driven sections further down the page. Both are cheap
+      // reads; they live here rather than on their own listeners so the
+      // page still only does layout work once per animation frame. The
+      // flag keeps them out of the early calls, before they exist.
+      if (extrasReady) {
+        paintStatement();
+        paintRail();
+      }
+
+      ticking = false;
+    }
+
+    addEventListener('scroll', () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+    }, { passive: true });
+
+    // Set the initial state, e.g. when the page is reloaded mid-scroll.
+    // Called again at the end of the script, once the scroll-driven
+    // sections below have been wired up.
+    onScroll();
+
+
+    /* ---- Cursor spotlight ----------------------------------------------
+       Moves the orange pool in the hero and contact sections to follow the
+       pointer, by writing --mx/--my (see .grain::before in the stylesheet).
+       Percentages rather than pixels, so the gradient keeps working if the
+       section resizes. */
+
+    if (FINE && !REDUCED) document.querySelectorAll('.grain').forEach(sec => {
+      sec.addEventListener('pointermove', e => {
+        const r = sec.getBoundingClientRect();
+        sec.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+        sec.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+      });
+    });
+
+
+    /* ---- Card tilt ------------------------------------------------------
+       Leans each card toward the pointer and moves its glow to match.
+       px/py are 0–1 across the card, so (px - .5) gives -0.5 to +0.5 and
+       the ±5deg range stays subtle — much more and it looks like a toy. */
+
+    if (FINE && !REDUCED) document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('pointermove', e => {
+        // Skip while the card is still fading in, or the tilt transform
+        // would overwrite the reveal animation mid-flight.
+        if (card.classList.contains('reveal') && !card.classList.contains('in')) return;
+
+        const r = card.getBoundingClientRect(),
+              px = (e.clientX - r.left) / r.width,
+              py = (e.clientY - r.top) / r.height;
+
+        card.style.setProperty('--cx', (px * 100).toFixed(1) + '%');
+        card.style.setProperty('--cy', (py * 100).toFixed(1) + '%');
+
+        // X rotation is inverted: pointer high up tips the top away.
+        card.style.transform = `perspective(900px) rotateX(${((.5 - py) * 5).toFixed(2)}deg) rotateY(${((px - .5) * 5).toFixed(2)}deg) translateY(-4px)`;
+      });
+
+      // Clearing the inline transform hands control back to the CSS, which
+      // eases the card flat again.
+      card.addEventListener('pointerleave', () => card.style.transform = '');
+    });
+
+
+    /* ---- Custom cursor --------------------------------------------------
+       Two elements: a dot that tracks the pointer exactly, and a ring that
+       eases along behind it and morphs into the shape of whatever it is
+       over — matching that element's position, size and corner radius.
+
+       The ring is animated in a requestAnimationFrame loop rather than by
+       CSS transition, because its target changes every frame; a transition
+       would always be chasing a stale value. Each frame moves 17–25% of
+       the remaining distance, which gives the trailing, elastic feel. */
+
+    if (FINE && !REDUCED) {
+      const dot = document.getElementById('cur'),
+            ring = document.getElementById('ring');
+
+      // Only hide the real cursor once this code is confirmed running.
+      document.body.classList.add('cursor-on');
+
+      // What the ring will wrap itself around.
+      const SNAP = 'a.btn, button, .chip, .card, .reel, .plat, .faq > button';
+
+      let mx = innerWidth / 2, my = innerHeight / 2;            // pointer
+      let tx = mx, ty = my, tw = 36, th = 36, tr = 999;          // target
+      let rx = mx, ry = my, rw = 36, rh = 36, rr = 999;          // current
+      let snapped = false, seen = false;
+
+      addEventListener('pointermove', e => {
+        mx = e.clientX;
+        my = e.clientY;
+
+        // On the very first move, place the ring instantly instead of
+        // letting it fly in from the middle of the screen.
+        if (!seen) { seen = true; rx = mx; ry = my; }
+
+        // The dot is positioned directly — no easing, no lag.
+        dot.style.transform = 'translate(' + mx + 'px,' + my + 'px)' +
+          (dot.classList.contains('press') ? ' scale(2.1)' : '');
+
+        const hit = e.target.closest(SNAP);
+        const r = hit && hit.getBoundingClientRect();
+
+        // Only wrap reasonably sized things: a ring stretched around a
+        // full-width card looks broken rather than deliberate.
+        if (r && r.width <= 560 && r.height <= 300) {
+          tx = r.left + r.width / 2;
+          ty = r.top + r.height / 2;
+          tw = r.width + 12;              // slight padding around the target
+          th = r.height + 12;
+          // Match the element's own rounding. The || 14 covers a computed
+          // style that cannot be parsed.
+          tr = Math.min(parseFloat(getComputedStyle(hit).borderTopLeftRadius) + 6 || 14, 999);
+          snapped = true;
+        } else {
+          // Back to a circle: slightly larger over something clickable.
+          tx = mx; ty = my;
+          tw = th = hit ? 56 : 36;
+          tr = 999;
+          snapped = false;
+        }
+
+        ring.classList.toggle('snapped', snapped);
+      }, { passive: true });
+
+      // The animation loop. Runs for the life of the page; the browser
+      // pauses it automatically when the tab is in the background.
+      (function loop() {
+        const ease = snapped ? .22 : .17;   // snap a little more eagerly
+
+        rx += (tx - rx) * ease;
+        ry += (ty - ry) * ease;
+        rw += (tw - rw) * .25;
+        rh += (th - rh) * .25;
+        rr += (tr - rr) * .25;
+
+        ring.style.width = rw.toFixed(1) + 'px';
+        ring.style.height = rh.toFixed(1) + 'px';
+        ring.style.marginLeft = (-rw / 2).toFixed(1) + 'px';
+        ring.style.marginTop = (-rh / 2).toFixed(1) + 'px';
+        // Cap the radius at half the smaller side, or a small ring would
+        // end up with a radius bigger than itself.
+        ring.style.borderRadius = Math.min(rr, rw / 2, rh / 2).toFixed(1) + 'px';
+        ring.style.transform = 'translate(' + rx.toFixed(1) + 'px,' + ry.toFixed(1) + 'px)';
+
+        requestAnimationFrame(loop);
+      })();
+
+      // Press feedback.
+      addEventListener('pointerdown', () => { dot.classList.add('press'); ring.classList.add('press'); });
+      addEventListener('pointerup', () => { dot.classList.remove('press'); ring.classList.remove('press'); });
+
+      // Fade both out when the pointer leaves the window.
+      document.addEventListener('pointerleave', () => { dot.classList.add('hide'); ring.classList.add('hide'); });
+      document.addEventListener('pointerenter', () => { dot.classList.remove('hide'); ring.classList.remove('hide'); });
+
+      // Release the ring on scroll: the element it wrapped has moved, and
+      // without this the ring would hang in empty space until the next
+      // pointer movement.
+      addEventListener('scroll', () => {
+        if (snapped) {
+          snapped = false;
+          tx = mx; ty = my;
+          tw = th = 36;
+          tr = 999;
+          ring.classList.remove('snapped');
+        }
+      }, { passive: true });
+    }
+
+
+    /* ---- Active nav link ------------------------------------------------
+       Underlines the nav link for whichever section is in view. The
+       rootMargin shrinks the detection band to roughly the middle 5% of
+       the screen, so the highlight changes as a section passes the centre
+       rather than the moment it peeks in at the bottom. */
+
+    /* Scoped to the link list on purpose. A broader "header nav a" also
+       matches the logo (href="#top") and the header CTA (href="#contact"),
+       neither of which is a section link — and because both sit outside
+       the list, measuring one places the indicator outside it too. */
+    const navLinks = [...document.querySelectorAll('#navLinks a[href^="#"]')];
+
+    // "services" -> the <a> pointing at #services
+    const sectionFor = new Map(navLinks.map(a => [a.getAttribute('href').slice(1), a]));
+
+    /* The indicator. One bar is moved and resized to sit under whichever
+       link is current, which reads as a single object travelling rather
+       than four separate underlines fading in and out. */
+    const navPill = document.getElementById('navPill');
+    let activeLink = null;
+
+    function movePill(a) {
+      if (!navPill || !a) return;
+      /* offsetParent is null while the desktop nav is hidden behind the
+         hamburger. Hide the bar rather than returning quietly: Tailwind
+         arrives from a CDN, so for a moment on load the nav is unstyled
+         and visible, and a measurement taken then would otherwise stick
+         around as a stale inline width. */
+      if (!a.offsetParent) { navPill.style.opacity = 0; return; }
+      const r = a.getBoundingClientRect(),
+            u = navPill.parentElement.getBoundingClientRect();
+      navPill.style.width = r.width + 'px';
+      navPill.style.transform = 'translateX(' + (r.left - u.left) + 'px)';
+      navPill.style.opacity = 1;
+    }
+
+    // Hovering previews where the bar would go; leaving returns it.
+    navLinks.forEach(a => {
+      a.addEventListener('pointerenter', () => movePill(a));
+      a.addEventListener('focus', () => movePill(a));
+    });
+    const navList = navPill && navPill.parentElement;
+    if (navList) {
+      navList.addEventListener('pointerleave', () => movePill(activeLink));
+    }
+
+    // Re-measure when the layout changes; widths shift with the viewport.
+    addEventListener('resize', () => movePill(activeLink), { passive: true });
+
+    const sio = new IntersectionObserver(es => es.forEach(e => {
+      const a = sectionFor.get(e.target.id);
+      if (!a) return;
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        a.classList.add('active');
+        activeLink = a;
+        movePill(a);
+      }
+    }), { rootMargin: '-45% 0px -50% 0px' });
+
+    // Only observe links that point at a section that actually exists.
+    [...sectionFor.keys()].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) sio.observe(el);
+    });
+
+
+    /* ---- Click ripple ---------------------------------------------------
+       An expanding circle at every click. Each one removes itself when its
+       animation ends, so they never accumulate in the DOM. */
+
+    if (!REDUCED) addEventListener('pointerdown', e => {
+      const r = document.createElement('span');
+      r.className = 'ripple';
+      r.style.left = e.clientX + 'px';
+      r.style.top = e.clientY + 'px';
+      document.body.appendChild(r);
+      r.addEventListener('animationend', () => r.remove());
+    }, { passive: true });
+
+
+    /* ---- Magnetic buttons -----------------------------------------------
+       Primary buttons lean toward the pointer. Vertical pull (.3) is
+       stronger than horizontal (.22) because the buttons are wider than
+       they are tall, which keeps the movement feeling even. */
+
+    if (FINE && !REDUCED) document.querySelectorAll('.btn-primary').forEach(b => {
+      b.addEventListener('pointermove', e => {
+        const r = b.getBoundingClientRect();
+        b.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * .22).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * .3).toFixed(1)}px) scale(1.03)`;
+      });
+      b.addEventListener('pointerleave', () => b.style.transform = '');
+    });
+
+
+    /* ---- Counting numbers -----------------------------------------------
+       Counts up to data-count when the figure scrolls into view, then
+       appends data-suffix. Each element is unobserved immediately so it
+       counts once, not every time it re-enters the screen.
+
+       The 1-(1-p)^4 curve starts fast and eases out hard, so the number
+       slows noticeably as it lands rather than stopping dead. 3000ms is
+       deliberately unhurried — the figures are the proof on this page and
+       are meant to be watched. */
+
+    const cio = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      cio.unobserve(e.target);
+
+      const el = e.target,
+            end = +el.dataset.count,           // unary + converts to number
+            suf = el.dataset.suffix || '',
+            t0 = performance.now();
+
+      // A number spinning through three thousand milliseconds is motion
+      // like any other, so reduced-motion visitors get the final figure
+      // immediately rather than a blur of changing digits.
+      if (REDUCED) { el.textContent = end + suf; return; }
+
+      (function tick(t) {
+        const p = Math.min((t - t0) / 3000, 1);          // 0 -> 1 progress
+        el.textContent = Math.round(end * (1 - Math.pow(1 - p, 4))) + suf;
+        if (p < 1) requestAnimationFrame(tick);
+      })(t0);
+    }), { threshold: .5 });   // wait until the figure is half visible
+
+    document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
+
+
+    /* ---- Work filter ----------------------------------------------------
+       Shows tiles whose data-type matches the chosen data-filter. Setting
+       display to '' (empty) restores the stylesheet's own value rather
+       than forcing 'block', which would break the grid. */
+
+    document.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-filter]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      document.querySelectorAll('#reels > a').forEach(r =>
+        r.style.display = (b.dataset.filter === 'all' || r.dataset.type === b.dataset.filter) ? '' : 'none'
+      );
+    }));
+
+
+    /* ---- FAQ accordion --------------------------------------------------
+       Toggles .open on the row, which drives the CSS grid-row animation,
+       and keeps aria-expanded in step for screen readers. Rows open
+       independently — opening one does not close the others. */
+
+    document.querySelectorAll('.faq > button').forEach(btn => btn.addEventListener('click', () => {
+      const f = btn.parentElement,
+            open = f.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+    }));
+
+
+    /* ---- Multi-step enquiry form ---------------------------------------- */
+
+    let step = 1;
+    const steps = [...document.querySelectorAll('.step')],
+          bars = [...document.querySelectorAll('.step-bar')];
+    const prev = document.getElementById('prev'),
+          next = document.getElementById('next'),
+          err = document.getElementById('err');
+
+    // Paints the current step: which panel shows, how many bars are lit,
+    // whether Back is available, and what the Next button says.
+    function render() {
+      steps.forEach(s => s.classList.toggle('hidden', +s.dataset.step !== step));
+      bars.forEach((b, i) => b.style.background = i < step ? 'var(--accent)' : 'var(--line)');
+
+      // invisible, not hidden: the button keeps its space, so Next does
+      // not jump left on step 1.
+      prev.classList.toggle('invisible', step === 1);
+
+      next.innerHTML = step === 3
+        ? 'Send enquiry <i data-lucide="send" class="w-4 h-4"></i>'
+        : 'Next <i data-lucide="arrow-right" class="w-4 h-4"></i>';
+
+      lucide.createIcons();   // render the icon just written above
+    }
+
+    prev.addEventListener('click', () => {
+      if (step > 1) { step--; render(); }
+    });
+
+    next.addEventListener('click', () => {
+      const f = document.getElementById('leadForm');
+
+      // Step 2 holds the only required fields. The email test is
+      // deliberately loose — "something@something.something" — because
+      // strict address validation rejects valid addresses, and the real
+      // check is whether the reply arrives.
+      if (step === 2) {
+        const n = f.name.value.trim(),
+              em = f.email.value.trim();
+        if (!n || !/^\S+@\S+\.\S+$/.test(em)) {
+          err.textContent = 'Please add your name and a valid email.';
+          err.classList.remove('hidden');
+          return;                     // stay on this step
+        }
+        err.classList.add('hidden');
+      }
+
+      // Not finished yet: advance and stop here.
+      if (step < 3) { step++; render(); return; }
+
+      // ---- Submit ----------------------------------------------------
+      // TO DO: replace this block with a real form backend.
+      // It builds a mailto: link and hands off to the visitor's email
+      // client, which needs no server but fails silently for anyone
+      // without one configured. A fetch() POST to Formspree, Resend or
+      // similar would drop in here instead; the markup needs no changes.
+      const d = new FormData(f);
+      const body = `Service: ${d.get('service')}\nNiche: ${d.get('niche')||'-'}\nName: ${d.get('name')}\nEmail: ${d.get('email')}\nInstagram/Website: ${d.get('handle')||'-'}\n\nGoals:\n${d.get('msg')||'-'}`;
+
+      // encodeURIComponent escapes line breaks and punctuation so the
+      // subject and body survive the URL intact.
+      window.location.href = 'mailto:' + EMAIL +
+        '?subject=' + encodeURIComponent('Boldx.io enquiry — ' + d.get('service')) +
+        '&body=' + encodeURIComponent(body);
+
+      // Swap the form for the confirmation and bring it into view.
+      f.classList.add('hidden');
+      const th = document.getElementById('thanks');
+      th.classList.remove('hidden');
+      th.classList.add('show');
+      th.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+    });
+
+
+    /* ---- Before / after slider -------------------------------------------
+       The control is a real <input type="range">, laid invisibly over the
+       frame. That one decision buys drag, touch and arrow-key support
+       without writing any of it, and it is announced properly to screen
+       readers. All this handler does is mirror the value onto the CSS
+       variable that clips the edited layer, and move the visible seam. */
+
+    const cmp = document.getElementById('cmpRange');
+    if (cmp) {
+      const frame = cmp.closest('.compare'),
+            seam = frame.querySelector('.cmp-divider');
+
+      function drawCompare() {
+        const pos = cmp.value + '%';
+        frame.style.setProperty('--pos', pos);
+        seam.style.left = pos;
+      }
+
+      cmp.addEventListener('input', drawCompare);
+      drawCompare();
+
+      // The range input covers the frame and handles keyboard and mouse,
+      // but a tap or a finger-drag does not always move a native range on
+      // touch devices. Driving the value from the pointer position too
+      // makes "touch anywhere on the frame" work the way people expect,
+      // and costs nothing on desktop where it simply agrees with the input.
+      let dragging = false;
+
+      function seekFromPointer(e) {
+        const r = frame.getBoundingClientRect();
+        const pct = ((e.clientX - r.left) / r.width) * 100;
+        cmp.value = Math.min(Math.max(pct, 0), 100);   // clamp to the frame
+        drawCompare();
+      }
+
+      frame.addEventListener('pointerdown', e => {
+        dragging = true;
+        // Keep receiving moves even if the finger leaves the frame.
+        if (frame.setPointerCapture) {
+          try { frame.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        seekFromPointer(e);
+      });
+      frame.addEventListener('pointermove', e => { if (dragging) seekFromPointer(e); });
+      frame.addEventListener('pointerup', () => { dragging = false; });
+      frame.addEventListener('pointercancel', () => { dragging = false; });
+
+      // Stop a vertical page scroll turning into a seam drag mid-gesture.
+      frame.style.touchAction = 'pan-y';
+
+      // A one-off nudge the first time the frame scrolls into view: the
+      // seam drifts a little, which tells the visitor it can be moved
+      // without a "drag me" label. Skipped if they have already grabbed
+      // it, and never runs under reduced motion.
+      if (!REDUCED) {
+        let nudged = false;
+        const hintIo = new IntersectionObserver(es => es.forEach(e => {
+          if (!e.isIntersecting || nudged) return;
+          nudged = true;
+          hintIo.unobserve(e.target);
+
+          const from = +cmp.value, to = 72, t0 = performance.now();
+          (function hint(t) {
+            const p = Math.min((t - t0) / 900, 1);
+            // Ease out and back, so it returns to where it started.
+            const swing = Math.sin(p * Math.PI);
+            cmp.value = from + (to - from) * swing;
+            drawCompare();
+            if (p < 1) requestAnimationFrame(hint);
+          })(t0);
+        }), { threshold: .45 });
+        hintIo.observe(frame);
+
+        // If the visitor takes hold of it, cancel the hint immediately.
+        cmp.addEventListener('pointerdown', () => { nudged = true; });
+      }
+    }
+
+
+    /* ---- Scroll-driven statement -----------------------------------------
+       Splits the positioning line into words and lights them progressively
+       as the block crosses the middle of the screen. Words named in
+       data-key are painted in the brand colour instead.
+
+       Progress is recomputed on scroll inside the existing rAF-throttled
+       handler (see onScroll), not on its own listener. */
+
+    const hlLine = document.getElementById('hlLine');
+    let hlWords = [];
+
+    if (hlLine) {
+      const keys = (hlLine.dataset.key || '').split(',').map(k => k.trim()).filter(Boolean);
+      const words = hlLine.textContent.split(/(\s+)/);
+      hlLine.textContent = '';
+
+      words.forEach(part => {
+        if (!part.trim()) { hlLine.appendChild(document.createTextNode(part)); return; }
+        const sp = document.createElement('span');
+        sp.className = 'hl-w' + (keys.includes(part) ? ' key' : '');
+        sp.textContent = part;
+        hlLine.appendChild(sp);
+        hlWords.push(sp);
+      });
+
+      // Reduced motion: no scrubbing, just show the finished sentence.
+      if (REDUCED) hlWords.forEach(w => w.classList.add('lit'));
+    }
+
+    function paintStatement() {
+      if (!hlLine || REDUCED || !hlWords.length) return;
+      const r = hlLine.getBoundingClientRect();
+      // 0 when the block's top reaches 85% down the screen, 1 by the time
+      // it has travelled to 35%. Clamped so it never overshoots.
+      const p = Math.min(Math.max((innerHeight * .85 - r.top) / (innerHeight * .5), 0), 1);
+      const lit = Math.round(p * hlWords.length);
+      hlWords.forEach((w, i) => w.classList.toggle('lit', i < lit));
+    }
+
+
+    /* ---- Process rail ----------------------------------------------------
+       Fills the line behind the four steps as they scroll past, and lights
+       each dot as it is reached. Horizontal from 768px up, vertical below,
+       so the fill is written to whichever axis is in play. */
+
+    const rail = document.getElementById('rail');
+    const railFill = rail && rail.querySelector('.rail-fill');
+    const railSteps = rail ? [...rail.querySelectorAll('.rail-step')] : [];
+
+    function paintRail() {
+      if (!rail || !railFill) return;
+
+      const horizontal = window.matchMedia('(min-width: 768px)').matches;
+      const r = rail.getBoundingClientRect();
+
+      // Same scrub window as the statement: starts low on the screen,
+      // completes as the block reaches the upper third.
+      const p = Math.min(Math.max((innerHeight * .8 - r.top) / (r.height + innerHeight * .25), 0), 1);
+
+      if (horizontal) {
+        railFill.style.width = (p * 100) + '%';
+        railFill.style.height = '2px';
+      } else {
+        railFill.style.height = (p * 100) + '%';
+        railFill.style.width = '2px';
+      }
+
+      // Light a dot once the fill has passed it.
+      const reached = Math.ceil(p * railSteps.length);
+      railSteps.forEach((st, i) => st.classList.toggle('on', i < reached));
+    }
+
+
+    /* ---- Plan picker -----------------------------------------------------
+       Switches the panel, rewrites the button label, and — the part that
+       earns its keep — pre-selects the matching radio in the enquiry form,
+       so a visitor who has already chosen does not get asked again. */
+
+    const planPicker = document.getElementById('planPicker');
+    if (planPicker) {
+      const planCta = document.getElementById('planCta');
+      const LABEL = {
+        'Video editing':   'Start a chat about editing',
+        'Content strategy':'Start a chat about strategy',
+        'Both':            'Start a chat about both'
+      };
+
+      planPicker.querySelectorAll('[data-plan]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const plan = btn.dataset.plan;
+
+          // Tabs: one selected at a time, with aria kept in step.
+          planPicker.querySelectorAll('[data-plan]').forEach(b => {
+            const on = b === btn;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-selected', on);
+          });
+
+          planPicker.querySelectorAll('.plan-panel').forEach(pan =>
+            pan.classList.toggle('on', pan.dataset.panel === plan)
+          );
+
+          planCta.innerHTML = LABEL[plan] + ' <i data-lucide="arrow-right" class="w-5 h-5"></i>';
+          lucide.createIcons();
+
+          // Carry the choice into the form further down the page.
+          const radio = document.querySelector(`#leadForm input[name="service"][value="${plan}"]`);
+          if (radio) radio.checked = true;
+        });
+      });
+    }
+
+
+    /* ---- Newsletter -----------------------------------------------------
+       Front-end only: this validates the address and shows a confirmation,
+       but stores nothing anywhere. Connect it to a real mailing list
+       before the page goes live, or remove the form — telling visitors
+       they are "on the list" when no list exists is worse than not asking. */
+
+    document.getElementById('news').addEventListener('submit', e => {
+      e.preventDefault();   // stop the browser navigating away
+      const v = document.getElementById('nemail').value.trim(),
+            m = document.getElementById('nmsg');
+      m.textContent = /^\S+@\S+\.\S+$/.test(v)
+        ? "Thanks — you're on the list."
+        : 'Please enter a valid email.';
+    });
+
+
+    /* ---- Final paint ------------------------------------------------------
+       Everything the scroll handler touches now exists, so release the
+       flag and run it once. This also sets the correct state for a page
+       loaded part-way down, or restored mid-scroll by the browser. */
+    extrasReady = true;
+    onScroll();
+
+    // Place the indicator under whichever link the first paint made
+    // current. Deferred one frame so the nav has its final layout.
+    requestAnimationFrame(() => movePill(activeLink));
+
+  </script>
+</body>
+</html>

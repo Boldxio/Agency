@@ -1,0 +1,3240 @@
+<!DOCTYPE html>
+<!--
+  ===========================================================================
+  BOLDX.IO — single-file marketing landing page
+  ===========================================================================
+
+  WHAT THIS FILE IS
+  One self-contained HTML page: markup, styles and behaviour all live here.
+  Only one thing loads from the internet (the Carlito webfont, a fallback
+  for machines without Calibri); everything else is in this file.
+
+  PERFORMANCE NOTES
+  - Tailwind is PRECOMPILED and inlined in the <style id="tailwind"> block
+    after the main stylesheet. It used to run as a live compiler from a
+    CDN, which rebuilt CSS in the visitor's browser and watched the page
+    for class changes. The inlined CSS only contains the utility classes
+    this page uses: if you add a Tailwind class that appears nowhere else
+    in the file, re-run the Tailwind build (content: this file) and
+    replace that block.
+  - Icons are inline SVG (Lucide icon shapes), so no icon library loads.
+  - Smooth wheel scrolling uses Lenis 1.1.20 (MIT), inlined before the
+    main script. Desktop mouse/trackpad only; touch and reduced-motion
+    visitors keep native scrolling. Set SMOOTH_SCROLL = false to turn it
+    off.
+  - Everything that moves every frame moves by transform or opacity only,
+    so the browser never repaints or re-lays-out the page to animate it.
+
+  HOW IT IS ORGANISED — search for these banners to jump around:
+      1  HEAD .............. meta tags, external libraries, Tailwind config
+      2  DESIGN TOKENS ..... the colour variables both themes read from
+      3  BASE + COMPONENTS . buttons, cards, fields, FAQ, marquee
+      4  MOTION LAYER ...... scroll reveals, hovers, custom cursor
+      4b SHOWCASE COMPONENTS the results grid and the positioning line
+      4c MOTION REFINEMENTS  easing and timing applied over section 4
+      4d PHONE PAINT BUDGET  what gets simplified on a small screen
+      4e ANIMATION PARKING .  pausing animation nobody can see
+      4f INTERACTION LAYER   smooth scroll, glows, tilt, word reveals
+      5  REDUCED MOTION .... the accessibility opt-out
+      6  POLISH + RESPONSIVE fluid type and the per-screen-size rules
+      7  MARKUP ............ the page content, section by section
+      8  SCRIPT ............ all behaviour, each block commented
+
+  EDITING IT LATER
+  - Colours: edit the variables under DESIGN TOKENS. Nothing hard-codes a
+    colour, so changing --accent in two places restyles the entire page.
+  - Text: edit it directly in the MARKUP section.
+  - Instagram DM: the IG_DM constant at the top of the SCRIPT section
+    (every "Start a chat" button opens it). The email address is in the
+    footer's mailto: links.
+
+  A NOTE ON "DUPLICATE" CSS RULES
+  Several selectors (.card, .btn, .reveal, .eyebrow, #ring, .chip) are
+  declared more than once, in different sections. That is deliberate, not an
+  oversight: the later block refines the earlier one, and CSS applies the
+  last matching rule. Each one is flagged with an "OVERRIDE" comment. Do not
+  merge them — doing so changes which value wins and will alter the design.
+  ===========================================================================
+-->
+<html lang="en" data-theme="dark">
+
+<head>
+
+  <!-- ===================================================================
+       1. HEAD
+       =================================================================== -->
+
+  <meta charset="UTF-8" />
+
+  <!-- Tells phones to use their real width instead of pretending to be a
+       980px desktop. Without this the whole page renders zoomed out.
+       No maximum-scale, so visitors can still pinch to zoom. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Browser tab title and the grey line shown under the link in Google. -->
+  <title>Boldx.io — Sharp edits. Clear strategy. Consistent content.</title>
+  <meta name="description" content="Boldx.io turns raw footage into polished short-form videos and builds the content strategy behind them. 850M+ views generated, 67+ brands served." />
+
+  <!-- Carlito: a metric-compatible stand-in for Calibri. Windows machines
+       already have Calibri; this covers everyone else. preconnect opens the
+       connection early so the font arrives sooner. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+
+  /* =====================================================================
+     2. DESIGN TOKENS
+     Every colour and shadow on the page comes from these variables, so the
+     light/dark switch is just a different set of values. The script flips
+     data-theme on <html>, and the whole page re-colours itself.
+     ===================================================================== */
+
+  :root,
+  [data-theme="dark"] {
+    --bg:          #0b0b0c;                  /* page background            */
+    --bg2:         #121214;                  /* alternating section bands  */
+    --card:        rgba(255,255,255,.04);    /* card / input surface       */
+    --card-hover:  rgba(255,255,255,.07);    /* same, on hover             */
+    --line:        rgba(255,255,255,.10);    /* hairline borders           */
+    --text:        #f6f4f1;                  /* body copy                  */
+    --muted:       #a3a09b;                  /* secondary copy             */
+    --accent:      #FA4616;                  /* brand orange               */
+    --accent-ink:  #fff;                     /* text drawn ON the accent   */
+    --glass:       rgba(11,11,12,.65);       /* frosted panels (nav, form) */
+    --glass-solid: #15151a;                  /* same panels, phone (no blur) */
+    --shadow:      0 30px 80px -30px rgba(250,70,22,.35); /* orange glow   */
+
+    /* ---- Motion tokens ----
+       One easing and duration scale for the whole page. Mixed, arbitrary
+       curves are what make a site feel assembled rather than designed, so
+       components reference these rather than inventing their own.
+         --ease        decisive: fast out of the gate, long settle
+         --ease-soft   gentler, for opacity and colour
+         --ease-spring overshoots slightly, for anything tactile */
+    --ease:        cubic-bezier(.2, .8, .2, 1);
+    --ease-soft:   cubic-bezier(.33, 1, .68, 1);
+    --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+    --dur-1:       .18s;   /* state flicks: press, hover colour     */
+    --dur-2:       .32s;   /* small moves: icons, chips             */
+    --dur-3:       .55s;   /* panels, indicators                    */
+    --dur-4:       .9s;    /* entrances                             */
+  }
+
+  /* Light theme. Same variable names, different values — nothing else in
+     the stylesheet needs to know which theme is active. The accent is
+     slightly darkened here so it still passes contrast on a pale page. */
+  [data-theme="light"] {
+    --bg:          #faf8f5;
+    --bg2:         #f1ede7;
+    --card:        rgba(0,0,0,.03);
+    --card-hover:  rgba(0,0,0,.06);
+    --line:        rgba(0,0,0,.10);
+    --text:        #121212;
+    --muted:       #5b5853;
+    --accent:      #E63E0E;
+    --accent-ink:  #fff;
+    --glass:       rgba(250,248,245,.75);
+    --glass-solid: #f6f3ee;
+    --shadow:      0 30px 80px -30px rgba(230,62,14,.35);
+  }
+
+
+  /* =====================================================================
+     3. BASE + COMPONENTS
+     ===================================================================== */
+
+  /* Anchor links glide instead of jumping. Switched off for visitors who
+     ask for reduced motion (see section 5). */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* The transition is what makes the theme toggle fade rather than snap. */
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Calibri, Carlito, 'Segoe UI', system-ui, sans-serif;
+    transition: background .3s, color .3s;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Two tiny helpers used all over the markup. */
+  .muted  { color: var(--muted); }
+  .accent { color: var(--accent); }
+
+  /* ---- Card -----------------------------------------------------------
+     The workhorse surface: services, results, process, FAQ rows. Gets a
+     3D tilt and a glow in the motion layer; see the OVERRIDE blocks. */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    transition: transform .35s cubic-bezier(.2,.8,.2,1), background .3s, border-color .3s;
+  }
+  .card:hover {
+    background: var(--card-hover);
+    /* Blend the border toward the accent rather than hard-switching it. */
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    transform: translateY(-4px);
+  }
+
+  /* ---- Frosted glass --------------------------------------------------
+     Used by the nav bar, the enquiry form and the floating chips. The
+     -webkit- copy is there for Safari. */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--line);
+  }
+
+  /* ---- Buttons --------------------------------------------------------
+     min-height 44px is the accessible minimum tap size. The pill radius
+     (999px) is deliberately larger than any button, which keeps the ends
+     perfectly round whatever the text length. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .85rem 1.4rem;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: transform .2s, box-shadow .3s, background .2s;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: var(--shadow);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+  }
+  .btn-ghost {
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: var(--card);
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+  }
+
+  /* ---- Small type -----------------------------------------------------
+     .eyebrow is the little orange label above each section heading.
+     .h-display is the tight tracking used on big headlines. */
+  .eyebrow {
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .h-display {
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.02;
+  }
+
+  /* ---- Scroll reveal --------------------------------------------------
+     Elements start invisible and shifted down; the script adds .in when
+     they scroll into view. Refined in the motion layer (OVERRIDE). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1);
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- Ambient glow ---------------------------------------------------
+     .grain sits on the hero and contact sections and paints two soft
+     orange pools behind the content. Replaced by a cursor-following
+     version in the motion layer (OVERRIDE). */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 80% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 0% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+
+  /* ---- Marquee --------------------------------------------------------
+     The scrolling word strip. The markup contains the word list twice; the
+     animation slides exactly 50%, so the second copy lands where the first
+     began and the loop is seamless. width:max-content stops it wrapping. */
+  .marquee {
+    display: flex;
+    gap: 3rem;
+    width: max-content;
+    animation: scroll 32s linear infinite;
+  }
+  @keyframes scroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* ---- Form fields ----------------------------------------------------
+     The focus ring is drawn with box-shadow rather than outline so it can
+     follow the rounded corners. */
+  .field {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: .85rem 1rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    min-height: 48px;
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  /* ---- Chips ----------------------------------------------------------
+     Used for the work filter and the form's service picker. In the form
+     the real radio input is visually hidden and the chip is its label, so
+     "input:checked + .chip" is what paints the selected state. Keyboard
+     users still focus the actual radio. */
+  .chip {
+    cursor: pointer;
+    padding: .6rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    transition: all .2s;
+    font-weight: 600;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+  }
+  input:checked + .chip,
+  .chip.on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  /* ---- FAQ accordion --------------------------------------------------
+     Animating height to "auto" is impossible in CSS, so the body is a grid
+     whose single row goes from 0fr to 1fr — which IS animatable. The inner
+     div needs overflow:hidden for the clip to work. */
+  .faq-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .35s ease;
+  }
+  .faq-body > div {
+    overflow: hidden;
+  }
+  .faq.open .faq-body {
+    grid-template-rows: 1fr;
+  }
+  /* The "+" icon rotates 45° into an "×" when the row opens. */
+  .faq.open .faq-icon {
+    transform: rotate(45deg);
+  }
+  .faq-icon {
+    transition: transform .3s;
+  }
+
+  /* Visible focus ring for keyboard users only — :focus-visible does not
+     fire on mouse clicks, so this never shows up as a stray outline. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+
+  /* =====================================================================
+     4. MOTION LAYER
+     Everything that moves. Kept together so the whole lot can be reasoned
+     about — and disabled — in one place (section 5 switches it all off).
+     ===================================================================== */
+
+  /* ---- Scroll progress bar -------------------------------------------
+     The thin orange line across the very top. Width is set from JS. */
+  /* Full width, scaled horizontally. Writing `width` here would have
+     meant a layout on every scroll frame; a transform is composited. */
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    z-index: 60;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, #fff), var(--accent));
+    box-shadow: 0 0 18px var(--accent);
+  }
+
+  /* The nav slides out of view on scroll down and returns on scroll up.
+     -130% rather than -100% so the shadow clears the top edge too. */
+  header {
+    transition: transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  header.hide {
+    transform: translateY(-130%);
+  }
+
+  /* ---- Cursor spotlight (OVERRIDE of .grain::before above) ------------
+     Same two pools, except the first one now follows the pointer: the JS
+     writes --mx/--my as percentages on pointermove. The fallback values
+     (78%, 6%) are what shows before the pointer has moved, and on touch
+     devices where it never will. */
+  .grain::before {
+    background:
+      radial-gradient(42% 42% at var(--mx,78%) var(--my,6%), color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 0% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+
+  /* A second, larger orange blob that drifts on a slow loop. Sized in vw
+     so it scales with the viewport, but capped at 520px on big screens. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    width: 38vw;
+    height: 38vw;
+    max-width: 520px;
+    max-height: 520px;
+    right: -8vw;
+    bottom: -12vw;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 68%);
+    filter: blur(10px);
+    animation: drift 18s ease-in-out infinite alternate;
+    /* will-change here is the opposite of the blanket use removed from
+       .reveal: a handful of elements that animate continuously AND carry
+       an expensive blur. Promoting them lets the browser rasterize the
+       blur once and then just move the layer, instead of re-painting a
+       large soft gradient on every frame. */
+    will-change: transform;
+  }
+  /* "alternate" means it eases back rather than snapping to the start. */
+  @keyframes drift {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(-8vw,-6vw,0) scale(1.25); }
+  }
+
+  /* ---- Scroll reveal, refined (OVERRIDE of .reveal above) -------------
+     Adds a slight scale-up and a longer, softer curve. The per-element
+     stagger delay is applied from JS. will-change asks the browser to
+     promote these to their own layer so the fade stays smooth. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px) scale(.985);
+    transition: opacity .75s ease, transform .9s cubic-bezier(.2,.8,.2,1);
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- Headline, word by word ----------------------------------------
+     The script wraps every word of the <h1> in <span class="w"> and gives
+     each one an increasing animation-delay, so the headline assembles.
+     "forwards" holds the final frame instead of snapping back. */
+  .w {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(.75em) rotate(3deg);
+    animation: wordIn .85s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes wordIn {
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---- Button motion (OVERRIDE: adds positioning for the sheen) -------
+     overflow:hidden is what clips the sheen to the pill shape. */
+  .btn {
+    position: relative;
+    overflow: hidden;
+  }
+  /* Icon-only buttons (the footer's Instagram and email links). They need
+     a fixed square so they stay circular and keep a full 44px tap target;
+     the plain .btn sizing is built around a text label. */
+  .btn-icon {
+    /* !important because .btn's padding and width are re-declared further
+       down the sheet and in the responsive blocks; this class exists only
+       to opt out of that sizing, so it has to be the last word. */
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    flex: none;
+  }
+  /* Any icon inside a button eases; the trailing one slides right. */
+  .btn svg {
+    transition: transform .3s cubic-bezier(.2,.8,.2,1);
+  }
+  .btn:hover svg:last-child {
+    transform: translateX(4px);
+  }
+  /* A diagonal white gleam, parked off to the left until hover. */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%) skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.38), transparent);
+  }
+  .btn-primary:hover::after {
+    animation: sheen .75s ease forwards;
+  }
+  @keyframes sheen {
+    to { transform: translateX(120%) skewX(-18deg); }
+  }
+
+  /* ---- Card motion (OVERRIDE: adds positioning + glow) ----------------
+     preserve-3d lets the JS tilt render with real perspective. */
+  .card {
+    position: relative;
+    transform-style: preserve-3d;
+  }
+  /* Glow that tracks the pointer; JS writes --cx/--cy on pointermove. */
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s;
+    background: radial-gradient(200px 200px at var(--cx,50%) var(--cy,50%), color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  }
+  .card:hover::after {
+    opacity: 1;
+  }
+  /* Lift normal children above the glow. Absolutely positioned children
+     (like a corner badge) are excluded, because giving them
+     position:relative would knock them out of their corner. */
+  .card > *:not(.absolute) {
+    position: relative;
+    z-index: 1;
+  }
+  .card > .absolute {
+    z-index: 2;
+  }
+
+  /* ---- Marquee edges --------------------------------------------------
+     A mask fades the strip out at both ends so words dissolve rather than
+     being chopped off. Hovering pauses the scroll so it can be read. */
+  .marquee-wrap {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-wrap:hover .marquee {
+    animation-play-state: paused;
+  }
+
+  /* Tabular figures keep the animated counters from jittering as digits
+     change width mid-count. */
+  [data-count] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* OVERRIDE of .chip above: swaps the blanket "all" transition for named
+     properties, so the lift can use its own easing curve. */
+  .chip {
+    transition: transform .2s cubic-bezier(.2,.8,.2,1), background .2s, color .2s, border-color .2s;
+  }
+  .chip:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ---- Heading underline ----------------------------------------------
+     Starts at scaleX(0) and draws left-to-right when the parent block
+     gets .in from the reveal observer. */
+  .sweep {
+    position: relative;
+    display: inline-block;
+  }
+  .sweep::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -.12em;
+    height: 3px;
+    width: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .9s cubic-bezier(.2,.8,.2,1) .2s;
+  }
+  .reveal.in .sweep::after,
+  .sweep.in::after {
+    transform: scaleX(1);
+  }
+
+
+  /* ---- Custom cursor and click feedback -------------------------------
+     Two fixed elements follow the pointer: #cur is a small dot that tracks
+     exactly, #ring is a larger outline that eases along behind it and
+     morphs around whatever is being pointed at. Both are pointer-events:
+     none so they never intercept a click. Desktop only — the media query
+     at the end of this block hides them on touch devices. */
+  #cur,
+  #ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    pointer-events: none;
+    border-radius: 50%;
+  }
+  /* Negative margins centre each element on the pointer coordinate. */
+  #cur {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    margin: -3.5px 0 0 -3.5px;
+    transition: opacity .25s, transform .18s ease;
+  }
+  /* Size, position and radius are driven from JS every frame — see the
+     animation loop in the script. Only the colours transition in CSS. */
+  /* No centring margin: the script folds that into the transform, which
+     keeps two layout-triggering writes out of the animation loop. */
+  #ring {
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  /* .press is added on mouse-down and removed on mouse-up. */
+  body.cursor-on #ring.press {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    border-color: var(--accent);
+  }
+  body.cursor-on #cur.press {
+    transform: scale(2.1);
+  }
+  /* .hide is applied when the pointer leaves the window entirely. */
+  body.cursor-on #cur.hide,
+  body.cursor-on #ring.hide {
+    opacity: 0;
+  }
+  /* Hide the real cursor only once the custom one is confirmed running —
+     the script adds .cursor-on — so a failure never leaves a page with no
+     cursor at all. Text fields keep their I-beam. */
+  body.cursor-on,
+  body.cursor-on a,
+  body.cursor-on button,
+  body.cursor-on label,
+  body.cursor-on .chip {
+    cursor: none;
+  }
+  body.cursor-on input,
+  body.cursor-on textarea {
+    cursor: text;
+  }
+
+  /* The expanding circle spawned at each click. The script removes the
+     element when the animation ends, so they never pile up. */
+  .ripple {
+    position: fixed;
+    z-index: 9998;
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: rippleOut .65s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes rippleOut {
+    to { transform: scale(7); opacity: 0; }
+  }
+
+  /* Physical press feedback. !important is needed because the magnetic-
+     button script writes an inline transform that would otherwise win. */
+  .btn:active {
+    transform: scale(.96) !important;
+  }
+  /* Snap back quickly on click rather than using the slow hover easing. */
+  .card:active {
+    transition: transform .08s;
+  }
+
+  /* No custom cursor on touch screens — there is no pointer to follow. */
+  @media (hover: none), (pointer: coarse) {
+    #cur, #ring { display: none; }
+  }
+
+
+
+
+  /* =====================================================================
+     4b. SHOWCASE COMPONENTS
+     The interactive pieces: a bento grid of uneven tiles and a
+     scroll-driven statement. All drawn in CSS, so neither needs image or
+     video assets.
+     ===================================================================== */
+
+
+  /* ---- Scroll-driven statement ----------------------------------------
+     The positioning line. Words start dim and light up as the block
+     crosses the screen, which makes the reader slow down and actually
+     take the sentence in. Progress is set from JS. */
+  .hl-line {
+    font-weight: 700;
+    letter-spacing: -.025em;
+    font-size: clamp(1.6rem, 1rem + 2.9vw, 3.1rem);
+    line-height: 1.22;
+    max-width: 22ch;
+  }
+  .hl-w {
+    color: color-mix(in srgb, var(--text) 22%, transparent);
+    transition: color .35s ease;
+  }
+  .hl-w.lit { color: var(--text); }
+  .hl-w.key { color: var(--accent); }
+
+  /* ---- Bento grid ------------------------------------------------------
+     Tiles of different weights in one grid, so the eye lands on the
+     headline figure first instead of scanning identical boxes. Two
+     columns on phones, four from md up. */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: .75rem;
+  }
+  @media (min-width: 768px) {
+    .bento { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1.25rem; }
+    .b-hero { grid-column: span 2; grid-row: span 2; }
+    .b-wide { grid-column: span 2; }
+    /* The two smaller tiles stack down the right half beside the big
+       figure, so the 2x2 block closes with no gap. */
+    .b-side { grid-column: span 2; }
+  }
+  /* On phones the headline tile still spans the full width. */
+  .b-hero, .b-wide { grid-column: span 2; }
+  .bento > * {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 150px;
+  }
+  .b-hero { min-height: 260px; }
+  /* The headline figure, sized to dominate the grid. */
+  .b-num {
+    font-weight: 700;
+    letter-spacing: -.04em;
+    line-height: .92;
+    font-size: clamp(2.6rem, 1.2rem + 5.4vw, 5.2rem);
+    color: var(--accent);
+  }
+  .b-sub {
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-size: clamp(1.4rem, 1rem + 1.4vw, 2.1rem);
+  }
+
+  /* ---- Process rail ----------------------------------------------------
+     A line that fills as the steps scroll past, so the four stages read as
+     one journey rather than four disconnected cards. Horizontal from md
+     up, vertical below — on a phone the steps stack, so the rail must too. */
+  .rail {
+    position: relative;
+  }
+  .rail-track, .rail-fill {
+    position: absolute;
+    border-radius: 999px;
+  }
+  .rail-track {
+    background: var(--line);
+  }
+  .rail-fill {
+    background: var(--accent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+    transition: transform .25s linear;
+  }
+  /* Phones: a vertical rail down the left, steps indented past it. */
+  /* Phones: full-length bar scaled from the top. */
+  .rail-track, .rail-fill { left: 13px; top: 0; width: 2px; }
+  .rail-track { height: 100%; }
+  .rail-fill  { height: 100%; transform: scaleY(0); transform-origin: top; }
+  .rail-step  { position: relative; padding-left: 46px; }
+  .rail-dot {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: .8rem;
+    font-weight: 700;
+    background: var(--bg);
+    border: 2px solid var(--line);
+    color: var(--muted);
+    transition: background .3s, border-color .3s, color .3s;
+  }
+  .rail-step.on .rail-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  @media (min-width: 768px) {
+    /* Desktop: rail runs horizontally behind the row of dots. */
+    .rail-track, .rail-fill { left: 0; top: 13px; height: 2px; width: 100%; }
+    .rail-fill { transform: scaleX(0); transform-origin: left; }
+    .rail-step { padding-left: 0; padding-top: 48px; }
+    .rail-dot { top: 0; left: 0; }
+  }
+
+
+  /* ---- Marquee v2 -----------------------------------------------------
+     Two rows travelling in opposite directions at different speeds, one
+     solid and one outlined. The counter-motion is what makes it read as a
+     designed band rather than a ticker: the eye cannot settle on either
+     row, so the whole strip feels alive at a glance.
+
+     Each row's word list appears TWICE in the markup; the animation moves
+     exactly 50%, so copy two lands where copy one began. */
+  .mq {
+    display: grid;
+    gap: .15rem;
+    padding: .15rem 0;
+  }
+  .mq-row {
+    display: flex;
+    align-items: center;
+    /* Spacing tracks the type size, so the rhythm holds at every width. */
+    gap: clamp(.9rem, .34rem + 2.06vw, 2.2rem);
+    width: max-content;
+    will-change: transform;
+  }
+  .mq-a, .mq-b { will-change: transform; }
+  .mq-a { animation: mqLeft 42s linear infinite; }
+  .mq-b { animation: mqRight 54s linear infinite; }
+  @keyframes mqLeft  { to   { transform: translateX(-50%); } }
+  @keyframes mqRight { from { transform: translateX(-50%); } }
+
+  /* Sized as a band, not a headline. Capped well below the section
+     headings so the strip never competes with them: roughly 16px on a
+     phone, 33px on a desktop, and no larger however wide the screen. */
+  .mq-word {
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.12;
+    font-size: clamp(1rem, .55rem + 1.7vw, 2.1rem);
+    white-space: nowrap;
+  }
+  /* The outlined row. The fallback colour keeps the words readable if
+     text-stroke is unsupported; @supports upgrades it to a true outline. */
+  .mq-out {
+    color: color-mix(in srgb, var(--text) 40%, transparent);
+  }
+  @supports (-webkit-text-stroke: 1px red) {
+    .mq-out {
+      color: transparent;
+      -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 58%, transparent);
+    }
+  }
+  /* A 1px outline needs size to read. Below 640px the words are around
+     16px, where the stroke turns muddy, so the second row goes solid and
+     simply sits a shade back from the first. Declared after the @supports
+     block so it wins on source order. */
+  @media (max-width: 640px) {
+    .mq-out {
+      color: color-mix(in srgb, var(--text) 46%, transparent);
+      -webkit-text-stroke: 0;
+    }
+  }
+  /* Diamond separator, drawn with a rotated square. */
+  .mq-dot {
+    width: clamp(7px, .3rem + .5vw, 9px);
+    height: clamp(7px, .3rem + .5vw, 9px);
+    flex: 0 0 auto;
+    rotate: 45deg;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .mq-dot.sm {
+    width: clamp(5px, .2rem + .35vw, 6px);
+    height: clamp(5px, .2rem + .35vw, 6px);
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  /* Hovering anywhere on the band pauses both rows so it can be read. */
+  .mq-wrap:hover .mq-row { animation-play-state: paused; }
+
+  /* ---- Bento motion ---------------------------------------------------- */
+
+  /* Slow aurora behind the headline tile, so the biggest number on the
+     page sits on something that breathes rather than flat black. */
+  .aurora {
+    position: absolute;
+    inset: -40% -20% auto -20%;
+    height: 150%;
+    pointer-events: none;
+    opacity: .55;
+    background:
+      radial-gradient(45% 45% at 25% 30%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%),
+      radial-gradient(40% 40% at 80% 55%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%);
+    filter: blur(32px);
+    animation: auroraDrift 16s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  @keyframes auroraDrift {
+    to { transform: translate3d(-8%, 6%, 0) scale(1.18); }
+  }
+
+  /* Growth bars inside the headline tile. Heights are set per bar as --h
+     and only applied once the tile reveals, so the chart draws itself as
+     the number counts up. */
+  .spark {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 56px;
+    margin-top: 1.5rem;
+  }
+  .spark i {
+    flex: 1;
+    height: 0;
+    border-radius: 4px 4px 2px 2px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 22%, transparent));
+    transition: height 1.1s cubic-bezier(.2,.8,.2,1);
+  }
+  /* Each bar waits a little longer than the one before it. */
+  .spark i:nth-child(1) { transition-delay: .05s; }
+  .spark i:nth-child(2) { transition-delay: .1s; }
+  .spark i:nth-child(3) { transition-delay: .15s; }
+  .spark i:nth-child(4) { transition-delay: .2s; }
+  .spark i:nth-child(5) { transition-delay: .25s; }
+  .spark i:nth-child(6) { transition-delay: .3s; }
+  .spark i:nth-child(7) { transition-delay: .35s; }
+  .spark i:nth-child(8) { transition-delay: .4s; }
+  .spark i:nth-child(9) { transition-delay: .45s; }
+  .spark i:nth-child(10){ transition-delay: .5s; }
+  .spark i:nth-child(11){ transition-delay: .55s; }
+  .spark i:nth-child(12){ transition-delay: .6s; }
+  .reveal.in .spark i { height: var(--h); }
+
+  /* Tile icons tip and lift when their card is hovered. */
+  .tile-ico {
+    transition: transform .4s cubic-bezier(.2,.8,.2,1), background .3s;
+  }
+  .card:hover .tile-ico {
+    transform: translateY(-3px) rotate(-8deg) scale(1.08);
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+
+  /* A thin accent line that draws across a tile on hover. */
+  .tile-rule {
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .55s cubic-bezier(.2,.8,.2,1);
+    margin-top: 1.1rem;
+  }
+  .card:hover .tile-rule { transform: scaleX(1); }
+
+  /* ---- Footer links ----------------------------------------------------
+     Replaces a Tailwind gap utility that was fighting the touch-target
+     rule and leaving the columns looking airy and unaligned. The tap
+     target comes from the link's own height, not from the gap, so the
+     rhythm stays tight on a phone AND stays accessible. */
+  .footer-links {
+    display: grid;
+    gap: 0;
+  }
+  /* On a phone each column was one link per row, which made the footer
+     nearly two screens tall for a handful of short words. Two columns
+     reads faster and keeps the closing wordmark within reach. */
+  @media (max-width: 639.98px) {
+    .footer-links { grid-template-columns: 1fr 1fr; column-gap: 1rem; }
+  }
+  footer .footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    width: fit-content;
+  }
+  @media (pointer: coarse) {
+    footer .footer-links a { min-height: 44px; min-width: 44px; }
+  }
+  /* ---- Closing wordmark ----
+     Sized against the viewport so it always spans most of the footer, and
+     outlined so it sits behind the content rather than shouting over it.
+     The @supports block mirrors the marquee's: a plain dim fill if the
+     browser cannot stroke text. */
+  .brandmark {
+    margin-top: 4.5rem;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: -.045em;
+    line-height: .8;
+    font-size: clamp(3rem, 14vw, 12rem);
+    white-space: nowrap;
+    user-select: none;
+    color: color-mix(in srgb, var(--text) 13%, transparent);
+  }
+  @supports (-webkit-text-stroke: 1px red) {
+    .brandmark {
+      color: transparent;
+      -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 26%, transparent);
+    }
+    .brandmark .bm-io { -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+  }
+  .brandmark .bm-io { color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+  .footer-head {
+    font-weight: 700;
+    font-size: .75rem;   /* 12px: the floor for legible UI text */
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .6rem;
+  }
+
+
+  /* =====================================================================
+     4c. MOTION REFINEMENTS
+     The details that separate "animated" from "considered": a shared
+     easing language, entrances that resolve out of focus rather than
+     sliding, a nav indicator that travels between links, and a theme
+     change that wipes across the page instead of blinking.
+     ===================================================================== */
+
+  /* ---- Entrances -------------------------------------------------------
+     A short defocus on the way in. The eye reads a blur resolving as
+     depth — something arriving — where a plain fade reads as a switch
+     being flipped. Desktop only: a filter on many elements at once is
+     the one thing here that can cost frames on a mid-range phone, and
+     the entrance works without it. */
+  @media (min-width: 768px) {
+    .reveal {
+      transition:
+        opacity var(--dur-4) var(--ease-soft),
+        transform var(--dur-4) var(--ease);
+    }
+  }
+
+  /* ---- Nav indicator ---------------------------------------------------
+     One bar that travels between links rather than a separate underline
+     fading in under each. Width and position are written from JS; the
+     transition on both is what produces the glide. Hovering previews the
+     destination, and the bar returns to the active section on leave. */
+  #navLinks { position: relative; }
+  #navPill {
+    position: absolute;
+    left: 0;
+    bottom: -7px;
+    height: 2px;
+    width: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--dur-3) var(--ease),
+      width var(--dur-3) var(--ease),
+      opacity var(--dur-2) var(--ease-soft);
+  }
+
+  /* ---- While the theme is changing ----
+     Two separate problems, both fixed here.
+
+     1. Flipping data-theme restarts the colour transition on every card,
+        chip, button and field at once — dozens of simultaneous eases.
+        Switched off; the wipe supplies the motion instead.
+
+     2. The wipe has to snapshot the viewport twice and composite the two.
+        Every animation still running during those ~400ms is repainted
+        into that composite, and this page has a lot of them: two marquee
+        rows, three blurred glows, forty waveform bars, the orbit ring,
+        the floating chips. Pausing them costs nothing visually — a paused
+        animation simply holds its current frame — and it is the single
+        biggest saving available on a phone. */
+     This was a hand-written list of every animated selector, which had
+     already fallen out of date — it still named a class that no longer
+     exists. One universal rule cannot drift, and catches anything added
+     later for free. It does not touch the wipe itself: that is driven
+     through the Web Animations API, which animation-play-state (a CSS
+     animation property) has no say over. */
+  html.theme-busy *,
+  html.theme-busy *::before,
+  html.theme-busy *::after {
+    transition: none !important;
+    animation-play-state: paused !important;
+  }
+
+  /* ---- Theme change ----------------------------------------------------
+     With the View Transitions API the new theme is revealed by a circle
+     expanding from the toggle itself, so the switch has a source and a
+     direction. The default cross-fade is disabled; the script drives the
+     clip-path instead. Browsers without the API simply get the instant
+     switch, which is the existing behaviour. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(root) { z-index: 1; }
+  ::view-transition-new(root) { z-index: 2; }
+
+  /* ---- Tactile feedback ------------------------------------------------
+     Buttons and chips now settle on the spring curve, so a press ends
+     with a slight overshoot rather than stopping dead. */
+  .btn { transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-3) var(--ease-soft), background var(--dur-1) var(--ease-soft); }
+  .chip { transition: transform var(--dur-2) var(--ease-spring), background var(--dur-1) var(--ease-soft), color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft); }
+  .card { transition: transform var(--dur-3) var(--ease), background var(--dur-2) var(--ease-soft), border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-3) var(--ease-soft); }
+  .field { transition: border-color var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft); }
+
+
+  /* =====================================================================
+     4d. PHONE PAINT BUDGET
+     Most visitors are on a phone, and phone GPUs are where this page was
+     doing its most expensive work. Everything below is about paint cost,
+     not layout — the design is unchanged, because at this size none of
+     it was perceptible in the first place.
+
+     backdrop-filter is the main offender: it forces the browser to copy
+     and blur whatever sits behind the element on every frame it changes.
+     The nav carries one and is on screen permanently, so it was being
+     paid for during every scroll. At phone width a 16px blur behind a
+     small panel is barely visible anyway, so the panels become solid and
+     the cost disappears.
+     ===================================================================== */
+
+  @media (max-width: 767px) {
+
+    /* Frosted panels -> flat panels. */
+    .glass {
+      background: var(--glass-solid);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    /* The big soft glows: smaller blur radii cost proportionally less to
+       rasterize, and at this size the difference cannot be seen. */
+    .aurora   { filter: blur(16px); }
+    .grain::after { filter: none; }
+
+    /* The film-grain overlay is a full-screen layer for an effect that is
+       invisible at phone pixel density. */
+    body::after { display: none; }
+
+    /* Shadows are cheap to declare and expensive to paint at this blur
+       radius; the cards already read as raised from their borders. */
+    .card:hover { box-shadow: none; }
+  }
+
+  /* =====================================================================
+     4e. OFF-SCREEN ANIMATION PARKING
+     =====================================================================
+     A CSS animation keeps ticking — and repainting — whether or not anyone
+     can see it. With a dozen looping decorations spread down a long page,
+     that is a constant tax on every scrolled frame, and on a phone it was
+     the single biggest cause of stutter: parking the off-screen ones
+     roughly doubles the scroll frame rate.
+
+     Nothing visible changes, because a section only parks once it has left
+     the viewport (plus a margin, so it is always running again well before
+     it can be seen). The pseudo-element selectors matter: play-state does
+     not reach ::before/::after through the cascade, and that is where the
+     grain and glow layers live. */
+  .anim-park,
+  .anim-park *,
+  .anim-park::before,  .anim-park::after,
+  .anim-park *::before, .anim-park *::after {
+    animation-play-state: paused !important;
+  }
+
+
+  /* =====================================================================
+     4f. INTERACTION LAYER
+     The second performance pass, and the motion added with it. One rule
+     runs through all of it: anything that changes every frame changes
+     transform or opacity, nothing else. Those two are handled by the
+     compositor on the GPU, so the page is never repainted or laid out
+     again to animate them — which is what made the old pointer effects
+     feel heavy.
+     ===================================================================== */
+
+  /* ---- Smooth wheel scrolling (Lenis) -----------------------------------
+     Lenis adds these classes to <html> while it is active. The native
+     smooth scroll above must be off under it, or the two fight. */
+  html.lenis, html.lenis body { height: auto; }
+  html.lenis.lenis-smooth { scroll-behavior: auto !important; }
+  html.lenis.lenis-stopped { overflow: hidden; }
+
+  /* ---- Blur filters removed ---------------------------------------------
+     A CSS blur() on something that moves is re-computed by the GPU on
+     every frame. These layers are radial gradients that already fade to
+     transparent, so the blur bought almost nothing visually. */
+  .grain::after { filter: none; }
+  .aurora { filter: none; opacity: .5; }
+
+  /* ---- Growth bars ------------------------------------------------------
+     Drawn with scaleY instead of animating height, which forced a layout
+     on every frame of the 1.1s draw. The per-bar delays above still apply
+     (their nth-child selectors outrank this one). */
+  .spark i {
+    height: var(--h);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 1.1s var(--ease);
+  }
+  .reveal.in .spark i { transform: scaleY(1); }
+
+  /* ---- Nav entrance ------------------------------------------------------
+     The bar drops in on load. "backwards" applies the start state during
+     the delay only, so the hide-on-scroll transition is untouched after. */
+  header { animation: navIn .9s var(--ease) .15s backwards; }
+  @keyframes navIn { from { transform: translateY(-130%); } }
+
+  /* ---- Hero --------------------------------------------------------------
+     The pointer glow used to be a gradient positioned by CSS variables,
+     so every mouse move repainted the entire hero. It is now a fixed-size
+     layer moved by transform (see the follower() script), which costs the
+     compositor a matrix and nothing else. The static pool in the opposite
+     corner stays on .grain::before. */
+  .grain::before {
+    background: radial-gradient(40% 40% at 0% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+  .hero-spot {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 900px;
+    height: 900px;
+    margin: -450px 0 0 -450px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle closest-side, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%);
+    will-change: transform;
+  }
+  @media (max-width: 767.98px) {
+    .hero-spot { width: 560px; height: 560px; margin: -280px 0 0 -280px; }
+  }
+
+  /* A faint editing-timeline grid that drifts slowly downward. The mask
+     sits on the still wrapper and only the inner layer moves, so the fade
+     stays put while the lines travel. The layer travels exactly one cell
+     (64px) per loop, so the repeat is seamless. */
+  .hero-grid {
+    --grid: color-mix(in srgb, var(--text) 7%, transparent);
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(70% 65% at 50% 38%, #000 25%, transparent 78%);
+            mask-image: radial-gradient(70% 65% at 50% 38%, #000 25%, transparent 78%);
+  }
+  .hero-grid::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -64px;
+    bottom: 0;
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-position: center top;
+    animation: gridPan 7s linear infinite;
+    will-change: transform;
+  }
+  @keyframes gridPan { to { transform: translate3d(0, 64px, 0); } }
+
+  /* Scroll cue: a mouse outline with a dot rolling down it. Fades out
+     once the page has moved (the script sets html.scrolled). */
+  .scroll-cue {
+    position: absolute;
+    left: 50%;
+    bottom: 30px;
+    width: 24px;
+    height: 38px;
+    margin-left: -12px;
+    border: 2px solid color-mix(in srgb, var(--text) 28%, transparent);
+    border-radius: 14px;
+    pointer-events: none;
+    transition: opacity .45s var(--ease-soft), transform .45s var(--ease-soft);
+  }
+  .scroll-cue::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    width: 4px;
+    height: 8px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: cueRoll 1.9s var(--ease) infinite;
+  }
+  @keyframes cueRoll {
+    0%   { transform: translateY(0);    opacity: 0; }
+    20%  { opacity: 1; }
+    75%  { transform: translateY(13px); opacity: 0; }
+    100% { transform: translateY(13px); opacity: 0; }
+  }
+  html.scrolled .scroll-cue { opacity: 0; transform: translateY(10px); }
+  @media (max-width: 639.98px), (max-height: 640px) {
+    .scroll-cue { display: none; }
+  }
+
+  /* ---- Section headings, word by word ------------------------------------
+     The same assembly as the hero headline, triggered when the heading's
+     block scrolls in (the reveal observer adds .in). Per-word delays are
+     set by the script. */
+  .w2 {
+    display: inline-block;
+    opacity: 0;
+    transform: translate3d(0, .55em, 0) rotate(2deg);
+    transition: opacity .6s var(--ease-soft), transform .9s var(--ease);
+  }
+  .reveal.in .w2 { opacity: 1; transform: none; }
+  /* The accent underline waits for its words to land before drawing. */
+  .reveal .sweep::after { transition-delay: .6s; }
+
+  /* ---- Process rail: each dot pops as the fill reaches it ---------------- */
+  .rail-step.on .rail-dot { animation: dotPop .55s var(--ease-spring); }
+  @keyframes dotPop { 45% { transform: scale(1.3); } }
+
+  /* ---- Marquee -------------------------------------------------------------
+     The script speeds the strip up with scroll speed, flips its direction
+     with scroll direction and leans it a little while it moves. The lean
+     is a transform on this wrapper, promoted so it never repaints. */
+  .mq { will-change: transform; }
+
+  /* ---- Cards ------------------------------------------------------------------
+     The glow used to be a gradient positioned with --cx/--cy, which
+     repainted the whole card on every mouse move. It is now one round
+     layer slid around by transform, clipped to the card. */
+  .card { overflow: hidden; }
+  .card::after {
+    inset: auto;
+    left: 0;
+    top: 0;
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    background: radial-gradient(circle closest-side, color-mix(in srgb, var(--accent) 18%, transparent), transparent);
+    transform: translate3d(calc(var(--gx, -999px) - 220px), calc(var(--gy, -999px) - 220px), 0);
+  }
+  .card.tilting::after { will-change: transform; }
+
+  /* The custom cursor moves on every frame the pointer does. On its own
+     layer, those moves stop invalidating the page underneath it. */
+  #cur, #ring { will-change: transform; }
+  /* While the pointer is on a card the tilt follows it on a short curve.
+     The long settle from the earlier rule is used only on the way out:
+     restarting a 0.55s transition on every mouse move is what made the
+     tilt feel like it was dragging behind the pointer. */
+  .card.tilting {
+    transition: transform .2s var(--ease), background var(--dur-2) var(--ease-soft), border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-3) var(--ease-soft);
+  }
+
+  /* Service icons twist on hover; list items slide in after their card. */
+  .svc-ico { transition: transform var(--dur-3) var(--ease-spring); }
+  .card:hover .svc-ico { transform: rotate(-8deg) scale(1.1); }
+  #services article li {
+    opacity: 0;
+    transform: translate3d(-12px, 0, 0);
+    transition: opacity .5s var(--ease-soft), transform .7s var(--ease);
+  }
+  #services article.in li { opacity: 1; transform: none; }
+  #services article li:nth-child(1) { transition-delay: .25s; }
+  #services article li:nth-child(2) { transition-delay: .33s; }
+  #services article li:nth-child(3) { transition-delay: .41s; }
+  #services article li:nth-child(4) { transition-delay: .49s; }
+
+  /* ---- Magnetic buttons: same fix as the tilt -------------------------------- */
+  .btn.mag {
+    transition: transform .22s var(--ease), box-shadow var(--dur-3) var(--ease-soft), background var(--dur-1) var(--ease-soft);
+  }
+
+  /* ---- Footer band glow --------------------------------------------------------
+     Replaces a 60px CSS blur. Follows the pointer across the orange band. */
+  .band-glow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 440px;
+    height: 440px;
+    margin: -220px 0 0 -220px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: .32;
+    background: radial-gradient(circle closest-side, #fff, transparent);
+    will-change: transform;
+  }
+
+  /* ---- Closing wordmark: letters rise in, and lift and fill on hover ---------- */
+  .bm-l {
+    display: inline-block;
+    transition: opacity .6s var(--ease-soft), transform .9s var(--ease-spring), color .25s var(--ease-soft), -webkit-text-stroke-color .25s var(--ease-soft);
+  }
+  .bm-ready .bm-l { opacity: 0; transform: translate3d(0, 42%, 0); }
+  .bm-ready.in .bm-l { opacity: 1; transform: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .bm-ready.in .bm-l:hover {
+      transform: translate3d(0, -9%, 0);
+      color: var(--accent);
+      -webkit-text-stroke-color: var(--accent);
+      transition-duration: .25s, .35s, .2s, .2s;
+    }
+  }
+
+  /* ---- Reduced motion: everything above lands in its finished state ----------- */
+  @media (prefers-reduced-motion: reduce) {
+    header { animation: none; }
+    .hero-grid::before, .scroll-cue::before { animation: none; }
+    .w2 { opacity: 1; transform: none; transition: none; }
+    #services article li { opacity: 1; transform: none; transition: none; }
+    .rail-step.on .rail-dot { animation: none; }
+    .bm-ready .bm-l { opacity: 1; transform: none; transition: none; }
+    .spark i { transform: scaleY(1); transition: none; }
+    .svc-ico { transition: none; }
+  }
+
+  /* =====================================================================
+     5. REDUCED MOTION
+     Honours the OS-level "reduce motion" setting, which people with
+     vestibular disorders and migraine triggers rely on. Everything still
+     renders — animations are switched off and anything that starts
+     invisible or mid-animation is pinned to its finished state.
+     ===================================================================== */
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Reveals: visible immediately, no fade or slide. */
+    .reveal, .reveal.in { transition: none; opacity: 1; transform: none; }
+    .w { animation: none; opacity: 1; transform: none; }
+
+    .marquee, .grain::after { animation: none; }
+    .sweep::after { transform: scaleX(1); }   /* underline drawn, not drawing */
+    header.hide { transform: none; }          /* nav never hides */
+    html { scroll-behavior: auto; }           /* jump, don't glide */
+
+    /* No cursor effects at all. */
+    #cur, #ring, .ripple { display: none; }
+
+    .grain::after, .aurora, .mq-a, .mq-b { will-change: auto; }
+
+    /* Showcase components: shown complete, nothing moving. */
+    .mq-row { animation: none; }
+    #navPill { transition: none; }
+    .aurora { animation: none; }
+    .spark i { transition: none; }
+    .tile-rule { transition: none; }
+    .hl-w { color: var(--text); transition: none; }
+    .hl-w.key { color: var(--accent); }
+    .rail-fill { transition: none; }
+
+    /* Give the real cursor back, since the custom one is gone. */
+    body.cursor-on,
+    body.cursor-on a,
+    body.cursor-on button { cursor: auto; }
+  }
+
+
+  /* =====================================================================
+     6. POLISH + RESPONSIVE
+     Typography, texture, and the handful of rules that change by screen
+     size. These were all added after testing the page at real viewport
+     widths, which is why they sit last and override earlier values.
+     ===================================================================== */
+
+  /* Predictable sizing: padding and borders count inside a stated width. */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Belt and braces against sideways scroll — one overhanging decorative
+     element would otherwise let the whole page slide. */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* Body copy grows very slightly with the viewport; the clamp keeps it
+     between 1rem and 1.07rem however wide the screen gets. */
+  body {
+    font-size: clamp(1rem, .97rem + .18vw, 1.07rem);
+    line-height: 1.62;
+  }
+
+  /* Brand-coloured text selection. */
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Stops the fixed nav covering a heading when an anchor link lands. */
+  [id] {
+    scroll-margin-top: 104px;
+  }
+
+  img, svg, video {
+    max-width: 100%;
+  }
+
+  /* ---- Fluid type ------------------------------------------------------
+     clamp(min, preferred, max) scales smoothly with the viewport instead
+     of jumping at each breakpoint, so headlines never land awkwardly at
+     in-between widths like 900px. */
+  h1.h-display {
+    font-size: clamp(2.45rem, 1.3rem + 5vw, 4.5rem);
+    line-height: 1.015;
+    letter-spacing: -.035em;
+  }
+  h2.h-display {
+    font-size: clamp(1.95rem, 1.25rem + 2.5vw, 3.15rem);
+    line-height: 1.06;
+  }
+  h3 {
+    letter-spacing: -.012em;
+  }
+  /* balance evens out heading line lengths; pretty stops paragraphs ending
+     on a single orphaned word. */
+  p { text-wrap: pretty; }
+  h1, h2, h3 { text-wrap: balance; }
+
+  /* Very faint film grain over the whole page, which stops the large flat
+     areas looking digitally clean. The noise is generated by an inline SVG
+     filter, so it costs no network request. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9996;
+    pointer-events: none;
+    opacity: .028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* OVERRIDE of .eyebrow above: adds the short accent dash before the
+     label. inline-flex is what lets the dash sit on the same line. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* OVERRIDE of .card above: slightly larger radius, plus a gradient
+     hairline that lights along the top-left edge on hover. The mask trick
+     paints only the 1px padding ring, leaving the middle transparent —
+     that is how you get a gradient border in CSS. */
+  .card {
+    border-radius: 22px;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 60%, transparent), transparent 48%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+  }
+  .card:hover::before {
+    opacity: 1;
+  }
+  .card:hover {
+    box-shadow: 0 30px 70px -45px rgba(0,0,0,.75);
+  }
+
+  /* Underlines the nav link for whichever section is currently in view;
+     the script adds .active as you scroll. */
+  header nav a.active {
+    color: var(--text);
+  }
+  /* The underline itself lives on #navPill, which travels between links
+     — see section 4c. This rule only brightens the active label. */
+
+  /* OVERRIDE of .btn above: a little more breathing room horizontally. */
+  .btn {
+    padding: .9rem 1.5rem;
+    letter-spacing: .005em;
+  }
+  .btn-ghost:hover {
+    background: var(--card-hover);
+  }
+
+  /* OVERRIDE of #ring above: only colour transitions in CSS. Size and
+     position are animated frame by frame in JS, and a CSS transition on
+     those would fight the script and lag behind the pointer. */
+  #ring {
+    transition: background .25s, border-color .25s, opacity .25s;
+  }
+  /* .snapped = the ring has wrapped itself around a clickable element. */
+  body.cursor-on #ring.snapped {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  #cur {
+    mix-blend-mode: normal;
+  }
+
+  /* ---- Phones ---------------------------------------------------------
+     Sections carry Tailwind padding utilities, so !important is needed to
+     tighten them here. The first section gets extra top padding to clear
+     the fixed nav. */
+  @media (max-width: 640px) {
+    main > section, footer {
+      padding-top: 4.25rem !important;
+      padding-bottom: 4.25rem !important;
+    }
+    main > section:first-child {
+      padding-top: 8rem !important;
+    }
+    /* The marquee is a band, not a content section — the rule above was
+       giving two lines of text 68px of padding top and bottom. */
+    main > section.mq-wrap {
+      padding-top: 1.1rem !important;
+      padding-bottom: 1.1rem !important;
+    }
+    .btn { width: auto; }
+    .card { border-radius: 18px; }
+    body .max-w-6xl, body .max-w-3xl {
+      padding-left: 1.15rem;
+      padding-right: 1.15rem;
+    }
+  }
+
+  /* Very small phones (older/compact handsets). */
+  @media (max-width: 380px) {
+    .btn { padding: .8rem 1.1rem; font-size: .95rem; }
+  }
+
+  /* Phones held sideways: little vertical room, so trim the hero hard or
+     the headline alone fills the screen. */
+  @media (max-height: 560px) and (orientation: landscape) {
+    main > section:first-child {
+      padding-top: 6.5rem !important;
+      padding-bottom: 3rem !important;
+    }
+  }
+
+  /* Large monitors: widen the content shell so it does not sit as a narrow
+     column stranded in the middle of the screen. */
+  @media (min-width: 1536px) {
+    body .max-w-6xl { max-width: 80rem; }
+    body .max-w-3xl { max-width: 48rem; }
+  }
+  @media (min-width: 2200px) {
+    body .max-w-6xl { max-width: 90rem; }
+    body { font-size: 1.14rem; }
+  }
+
+  /* ---- Legibility and tap targets -------------------------------------
+     Nothing below 12px, and 44px minimum tap targets on touch. */
+  footer .muted a { display: inline-block; }
+
+  /* pointer: coarse means a finger, not a mouse. Desktop spacing stays
+     tight because these rules simply do not apply there. */
+  @media (pointer: coarse) {
+    /* Footer column links are handled by .footer-links, which sets the
+       tap target on the link itself rather than padding it out with a
+       gap, which a utility class would override. These cover the
+       remaining links. */
+    footer p a {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+    header a[aria-label="Boldx.io home"],
+    footer a[aria-label="Boldx.io home"] { min-height: 44px; }
+    header nav ul a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: .25rem .35rem;
+    }
+  }
+
+  /* ---- Nav visibility --------------------------------------------------
+     These must not be left to Tailwind alone. .btn sets
+     display:inline-flex, and depending on stylesheet order that can beat
+     Tailwind's .lg\:hidden, putting the hamburger on desktop beside the
+     full nav. Pinning it by ID with !important removes the ambiguity.
+     1024px is the switch point: below it the hamburger, above it the
+     links. Tablets stay on the hamburger because they are touch devices. */
+  @media (min-width: 1024px) {
+    #menuBtn, #mobileMenu { display: none !important; }
+  }
+  @media (max-width: 1023.98px) {
+    #navLinks { display: none !important; }
+  }
+  /* The single most important button on the page, kept visible on
+     phones — which is where most of the traffic is. It was hidden below
+     400px, i.e. on a large share of real devices. It fits comfortably
+     once the bar is tightened a little; it only steps aside on the
+     narrowest handsets, where the same link sits in the open menu. */
+  @media (max-width: 640px) {
+    header nav { padding-left: .85rem; padding-right: .85rem; gap: .5rem; }
+    #navCta { padding: .55rem 1rem; font-size: .9rem; min-height: 40px; }
+    header nav > div:last-child { gap: .4rem; }
+    #themeBtn, #menuBtn { width: 40px; height: 40px; }
+  }
+  @media (max-width: 359.98px) {
+    #navCta { display: none !important; }
+  }
+  /* The script toggles .hidden; this guarantees it closes. */
+  #mobileMenu.hidden {
+    display: none !important;
+  }
+
+  </style>
+
+  <!-- Tailwind CSS v3.4.17, precompiled for this page (only the utility
+       classes used here). Sits after the main stylesheet: the same position
+       the Tailwind CDN script injected it into, so every rule resolves as
+       before. See PERFORMANCE NOTES at the top before adding new classes. -->
+  <style id="tailwind">*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:Calibri,Carlito,Segoe UI,system-ui,sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}.visible{visibility:visible}.invisible{visibility:hidden}.collapse{visibility:collapse}.static{position:static}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-x-0{left:0;right:0}.top-0{top:0}.z-50{z-index:50}.mx-3{margin-left:.75rem;margin-right:.75rem}.mx-auto{margin-left:auto;margin-right:auto}.-ml-2{margin-left:-.5rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mt-0\.5{margin-top:.125rem}.mt-10{margin-top:2.5rem}.mt-12{margin-top:3rem}.mt-14{margin-top:3.5rem}.mt-16{margin-top:4rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.mt-9{margin-top:2.25rem}.mt-auto{margin-top:auto}.block{display:block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-11{height:2.75rem}.h-12{height:3rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-9{height:2.25rem}.w-11{width:2.75rem}.w-12{width:3rem}.w-4{width:1rem}.w-5{width:1.25rem}.w-6{width:1.5rem}.w-8{width:2rem}.w-9{width:2.25rem}.w-full{width:100%}.max-w-2xl{max-width:42rem}.max-w-3xl{max-width:48rem}.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}.max-w-lg{max-width:32rem}.max-w-sm{max-width:24rem}.max-w-xs{max-width:20rem}.shrink-0{flex-shrink:0}.grow{flex-grow:1}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.resize{resize:both}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.place-items-center{place-items:center}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-7{gap:1.75rem}.gap-8{gap:2rem}.gap-9{gap:2.25rem}.gap-x-8{-moz-column-gap:2rem;column-gap:2rem}.gap-y-10{row-gap:2.5rem}.overflow-hidden{overflow:hidden}.text-wrap{text-wrap:wrap}.\!rounded-2xl{border-radius:1rem!important}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-y{border-top-width:1px;border-bottom-width:1px}.\!p-0{padding:0!important}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-7{padding:1.75rem}.p-8{padding:2rem}.\!py-2\.5{padding-top:.625rem!important;padding-bottom:.625rem!important}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-2\.5{padding-top:.625rem;padding-bottom:.625rem}.py-20{padding-top:5rem;padding-bottom:5rem}.py-24{padding-top:6rem;padding-bottom:6rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.pb-10{padding-bottom:2.5rem}.pb-20{padding-bottom:5rem}.pb-5{padding-bottom:1.25rem}.pt-20{padding-top:5rem}.pt-36{padding-top:9rem}.pt-6{padding-top:1.5rem}.pt-8{padding-top:2rem}.text-left{text-align:left}.text-center{text-align:center}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.font-bold{font-weight:700}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.tracking-tight{letter-spacing:-.025em}.underline{text-decoration-line:underline}.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.opacity-90{opacity:.9}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.outline{outline-style:solid}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.blur{--tw-blur:blur(8px)}.blur,.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-filter{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,-webkit-backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter,-webkit-backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.ease-out{transition-timing-function:cubic-bezier(0,0,.2,1)}.hover\:text-\[var\(--text\)\]:hover{color:var(--text)}@media (min-width:640px){.sm\:mx-6{margin-left:1.5rem;margin-right:1.5rem}.sm\:inline-flex{display:inline-flex}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:p-10{padding:2.5rem}.sm\:p-12{padding:3rem}.sm\:p-7{padding:1.75rem}.sm\:p-9{padding:2.25rem}.sm\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\:py-28{padding-top:7rem;padding-bottom:7rem}.sm\:py-32{padding-top:8rem;padding-bottom:8rem}.sm\:py-6{padding-top:1.5rem;padding-bottom:1.5rem}.sm\:pb-28{padding-bottom:7rem}.sm\:pt-44{padding-top:11rem}.sm\:text-4xl{font-size:2.25rem;line-height:2.5rem}.sm\:text-5xl{font-size:3rem;line-height:1}.sm\:text-6xl{font-size:3.75rem;line-height:1}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}}@media (min-width:768px){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\:gap-6{gap:1.5rem}}@media (min-width:1024px){.lg\:mx-auto{margin-left:auto;margin-right:auto}.lg\:flex{display:flex}.lg\:hidden{display:none}.lg\:grid-cols-\[1\.5fr_\.75fr_\.75fr_1\.3fr\]{grid-template-columns:1.5fr .75fr .75fr 1.3fr}.lg\:gap-12{gap:3rem}.lg\:text-7xl{font-size:4.5rem;line-height:1}}</style>
+</head>
+
+
+<!-- =======================================================================
+     7. MARKUP
+     ======================================================================= -->
+
+<body class="antialiased">
+
+  <!-- Three decorative elements that live outside the page flow and follow
+       the scroll or the pointer. aria-hidden keeps them out of screen
+       readers, which have nothing useful to say about a cursor dot. -->
+  <div id="progress" aria-hidden="true"></div>  <!-- scroll progress bar   -->
+  <div id="ring" aria-hidden="true"></div>      <!-- cursor outline ring   -->
+  <div id="cur" aria-hidden="true"></div>       <!-- cursor dot            -->
+
+
+  <!-- ===================================================================
+       NAVIGATION
+       Fixed to the top. The links show from 1024px up; below that they
+       collapse into the hamburger menu underneath.
+       =================================================================== -->
+  <header class="fixed top-0 inset-x-0 z-50">
+    <nav class="glass mx-3 sm:mx-6 mt-3 rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between max-w-6xl lg:mx-auto" aria-label="Main">
+
+      <!-- Logo. Swap the orange "B" square for an <img> once a logo
+           file is available. -->
+      <a href="#top" class="flex items-center gap-2 font-bold text-xl tracking-tight" aria-label="Boldx.io home">
+        <span class="w-8 h-8 rounded-lg grid place-items-center font-bold" style="background:var(--accent);color:#fff">B</span>
+        <span>Boldx<span class="accent">.io</span></span>
+      </a>
+
+      <!-- Desktop links. The ID is needed by the CSS that pins visibility. -->
+      <ul id="navLinks" class="hidden lg:flex items-center gap-7 text-sm font-semibold muted">
+        <li><a class="hover:text-[var(--text)] transition" href="#process">Process</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#services">Services</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#results">Results</a></li>
+        <li><a class="hover:text-[var(--text)] transition" href="#faq">FAQ</a></li>
+        <!-- The travelling underline. An <li> rather than a <span> so the
+             list stays valid; it is positioned absolutely, so it takes no
+             space in the flex row. -->
+        <li id="navPill" aria-hidden="true"></li>
+      </ul>
+
+      <div class="flex items-center gap-2">
+        <!-- Theme toggle. The icon is swapped in JS to match the mode. -->
+        <button id="themeBtn" class="btn btn-ghost btn-icon" aria-label="Toggle light or dark theme"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun w-5 h-5" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
+
+        <!-- The single most important button on the page. Opens the
+             Instagram DM directly, like every "Start a chat" on the page. -->
+        <a id="navCta" href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm class="btn btn-primary hidden sm:inline-flex !py-2.5">Start a chat</a>
+
+        <!-- aria-expanded is kept in sync by the script so screen readers
+             announce whether the menu is open. -->
+        <button id="menuBtn" class="btn btn-ghost !p-0 w-11 h-11 lg:hidden" aria-label="Open menu" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu w-5 h-5" aria-hidden="true"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+      </div>
+    </nav>
+
+    <!-- Mobile menu. Hidden by default; the script toggles .hidden, and
+         tapping any link inside closes it again. -->
+    <div id="mobileMenu" class="glass hidden lg:hidden mx-3 mt-2 rounded-3xl p-5">
+      <ul class="grid gap-1 text-lg font-semibold">
+        <li><a class="block py-3" href="#process">Process</a></li>
+        <li><a class="block py-3" href="#services">Services</a></li>
+        <li><a class="block py-3" href="#results">Results</a></li>
+        <li><a class="block py-3" href="#faq">FAQ</a></li>
+        <li><a class="btn btn-primary mt-2" href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm>Start a chat</a></li>
+      </ul>
+    </div>
+  </header>
+
+
+  <main id="top">
+
+  <!-- ===================================================================
+       HERO
+       Headline, the call to action and the proof numbers, centred in a
+       single column.
+       =================================================================== -->
+  <section class="relative grain overflow-hidden pt-36 pb-20 sm:pt-44 sm:pb-28">
+    <!-- Decorative layers: the drifting grid and the pointer glow. -->
+    <div class="hero-grid" aria-hidden="true"></div>
+    <div class="hero-spot" aria-hidden="true"></div>
+
+    <!-- hero-inner drifts up and fades as the page scrolls away from it. -->
+    <div class="hero-inner relative max-w-4xl mx-auto px-5 sm:px-6 text-center">
+
+      <p class="eyebrow reveal">Short-form video, done properly</p>
+
+      <!-- The script splits this into per-word spans so it assembles
+           itself on load. Keep the markup simple; nested elements are
+           walked recursively, but the fewer the better. -->
+      <h1 class="h-display text-5xl sm:text-6xl lg:text-7xl mt-4 reveal">
+        We turn raw footage into <span class="accent">polished short-form videos.</span>
+      </h1>
+
+      <p class="muted text-lg sm:text-xl mt-6 max-w-2xl mx-auto reveal">
+        Boldx.io helps creators and professionals stop the scroll with editing, hooks, captions and calls to action built to grow your business.
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-3 mt-9 reveal">
+        <a href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm class="btn btn-primary">Start a chat <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-5 h-5" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+      </div>
+
+      <!-- Proof numbers. data-count is the target figure and
+           data-suffix what follows
+           it; the script counts up from zero when they scroll into view.
+           A <dl> is the correct element for label/value pairs — the
+           visible captions sit below, so the <dt>s are screen-reader
+           only to avoid reading each label twice.
+           NOTE: the number and its unit must stay on one line, or the
+           browser inserts a space ("3 yrs" instead of "3yrs"). -->
+      <dl class="grid grid-cols-3 gap-4 mt-14 max-w-lg mx-auto reveal">
+        <div><dt class="sr-only">Views generated</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="850" data-suffix="M+">0</span></dd><p class="muted text-sm">Views generated</p></div>
+        <div><dt class="sr-only">Brands served</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="67" data-suffix="+">0</span></dd><p class="muted text-sm">Brands served</p></div>
+        <div><dt class="sr-only">Years in short-form</dt><dd class="text-3xl sm:text-4xl font-bold"><span data-count="3" data-suffix="">0</span><span class="accent">yrs</span></dd><p class="muted text-sm">In the space</p></div>
+      </dl>
+    </div>
+
+    <div class="scroll-cue" aria-hidden="true"></div>
+  </section>
+
+
+
+  <!-- ===================================================================
+       MARQUEE
+       Two bands running in opposite directions at different speeds: the
+       top row solid, the bottom row outlined. The counter-motion is what
+       stops it reading like a stock ticker — the eye cannot lock onto
+       either row, so the strip stays alive without shouting.
+
+       Each row's word list appears TWICE on purpose. The animation travels
+       exactly 50%, so the second copy arrives where the first began and
+       the loop never shows a seam. Edit one copy, edit both.
+
+       Hovering pauses both rows. Decorative, so the whole band is hidden
+       from screen readers.
+       =================================================================== -->
+  <section aria-hidden="true" class="py-5 sm:py-6 border-y overflow-hidden mq-wrap" style="border-color:var(--line);background:var(--bg2)">
+    <div class="mq marquee-wrap">
+      <div class="mq-row mq-a"><span class="mq-word ">Hooks</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Captions</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Visuals</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Scripts</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">CTAs</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Strategy</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Hooks</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Captions</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Visuals</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Scripts</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">CTAs</span><span class="mq-dot " aria-hidden="true"></span><span class="mq-word ">Strategy</span><span class="mq-dot " aria-hidden="true"></span></div>
+      <div class="mq-row mq-b"><span class="mq-word mq-out">Pacing</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Colour</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Sound design</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Subtitles</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Retention</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Thumbnails</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Pacing</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Colour</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Sound design</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Subtitles</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Retention</span><span class="mq-dot sm" aria-hidden="true"></span><span class="mq-word mq-out">Thumbnails</span><span class="mq-dot sm" aria-hidden="true"></span></div>
+    </div>
+  </section>
+
+
+
+
+  <!-- ===================================================================
+       PROCESS
+       Four steps, from first message to published video. An <ol> because
+       the order is the point.
+       =================================================================== -->
+  <section id="process" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">How it works</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">From first chat to <span class="sweep">ready-to-post.</span></h2>
+      </div>
+      <!-- ---- Process rail ----
+           The four steps are one journey, so they sit on a line that fills
+           as you scroll and lights each dot in turn, rather than reading
+           as four disconnected cards. The rail runs vertically on phones
+           (where the steps stack) and horizontally from md up — see the
+           .rail rules in the stylesheet. -->
+      <div class="rail mt-12" id="rail">
+        <div class="rail-track" aria-hidden="true"></div>
+        <div class="rail-fill" aria-hidden="true"></div>
+        <ol class="grid gap-9 md:grid-cols-4 md:gap-6 relative">
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">01</span>
+            <h3 class="font-bold text-xl">Start a chat</h3>
+            <p class="muted mt-2">Tell us about your business, goals and the content you need.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">02</span>
+            <h3 class="font-bold text-xl">Agree a plan</h3>
+            <p class="muted mt-2">We confirm exactly what's included — editing, strategy or both.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">03</span>
+            <h3 class="font-bold text-xl">Send raw clips</h3>
+            <p class="muted mt-2">That's all we need to begin. You never edit a thing.</p>
+          </li>
+          <li class="rail-step reveal">
+            <span class="rail-dot" aria-hidden="true">04</span>
+            <h3 class="font-bold text-xl">Post &amp; grow</h3>
+            <p class="muted mt-2">Every edit arrives ready to post, with captions and CTAs included.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================================================================
+       POSITIONING STATEMENT
+       The single line that separates this service from a freelance
+       editor, given a section of its own.
+
+       The words light up as the block crosses the screen, which slows the
+       reader down just enough to take the sentence in.
+       =================================================================== -->
+  <section class="py-20 sm:py-28">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+      <p class="eyebrow reveal">Where we fit</p>
+      <!-- data-key lists the words to paint in the accent colour. -->
+      <p class="hl-line mt-5" id="hlLine" data-key="short-form,department.">We are not another editing service. We are your short-form department.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SERVICES
+       Two services, each ending in its own "Start a chat" that opens the
+       Instagram DM. The cards are flex columns and the button sits in an
+       mt-auto wrapper, so both buttons line up along the bottom edge
+       whatever the length of the copy above them.
+       =================================================================== -->
+  <section id="services" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">What we do</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Two services. <span class="sweep">One short-form system.</span></h2>
+        <p class="muted text-lg mt-4">Pick editing, strategy, or both. We run the whole system — finding the moments, editing, writing captions and CTAs, and driving viewers to your offer — so your editor can stay focused on your longform.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-5 mt-12">
+
+        <!-- Service 1: video editing (the headline offer) -->
+        <article class="card p-8 sm:p-10 reveal flex flex-col">
+          <div class="svc-ico w-12 h-12 rounded-2xl grid place-items-center mb-6" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clapperboard w-6 h-6" aria-hidden="true"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></div>
+          <h3 class="text-2xl font-bold">Video Editing</h3>
+          <p class="muted mt-3">Your raw clips, edited into polished short-form videos — ready to post.</p>
+          <ul class="mt-6 grid gap-3">
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Scroll-stopping hooks and pacing</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Captions, visuals and calls to action included</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Posting support, depending on your plan</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>You never edit a thing</li>
+          </ul>
+          <div class="mt-auto pt-8">
+            <a href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm class="btn btn-primary" aria-label="Start a chat about video editing">Start a chat <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-5 h-5" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          </div>
+        </article>
+
+        <!-- Service 2: content strategy -->
+        <article class="card p-8 sm:p-10 reveal flex flex-col">
+          <div class="svc-ico w-12 h-12 rounded-2xl grid place-items-center mb-6" style="background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lightbulb w-6 h-6" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></div>
+          <h3 class="text-2xl font-bold">Content Strategy</h3>
+          <p class="muted mt-3">Niche-specific ideas and structure, so you always know what to make and why.</p>
+          <ul class="mt-6 grid gap-3">
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Topic and content ideas for your niche</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Hooks, scripts and calls to action</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>You record — we guide the structure</li>
+            <li class="flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-5 h-5 accent shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Pair it with editing whenever you like</li>
+          </ul>
+          <div class="mt-auto pt-8">
+            <a href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm class="btn btn-primary" aria-label="Start a chat about content strategy">Start a chat <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-5 h-5" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+
+
+
+  <!-- ===================================================================
+       RESULTS
+       The headline figures. No case studies are shown while there are no
+       real results to publish — invented ones are the fastest way to lose
+       a prospect's trust.
+       =================================================================== -->
+  <section id="results" class="py-24 sm:py-32">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <div class="max-w-2xl reveal">
+        <p class="eyebrow">Experience &amp; results</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Years of building <span class="sweep">pages that grow.</span></h2>
+        <p class="muted text-lg mt-4">We've spent the past 2–3 years building established Instagram pages and shaping content across different niches — so we understand how this space works.</p>
+      </div>
+
+      <!-- ---- Bento grid ----
+           Proof laid out as tiles of unequal weight rather than a row of
+           identical boxes: the views figure is the strongest number on the
+           page, so it takes a tile four times the size of the others and
+           the eye lands on it first.
+
+           The counters animate on scroll; see the [data-count] handler. -->
+      <div class="bento mt-12">
+
+        <!-- The headline figure. The aurora drifts behind it, and the
+             bars below draw themselves the moment the tile reveals, so
+             the number counting up and the chart filling read as one
+             gesture. Bar heights are arbitrary and illustrative — they
+             show a rising trend, not month-by-month data. -->
+        <div class="card b-hero p-7 sm:p-9 reveal relative overflow-hidden">
+          <div class="aurora absolute" aria-hidden="true"></div>
+          <div>
+            <p class="eyebrow">Views generated</p>
+            <p class="b-num mt-4"><span data-count="850" data-suffix="M+">0</span></p>
+            <p class="muted mt-4 max-w-xs">Across the Instagram pages we've built and run over the past two to three years.</p>
+          </div>
+          <div class="spark" aria-hidden="true">
+            <i style="--h:16%"></i><i style="--h:24%"></i><i style="--h:19%"></i><i style="--h:33%"></i>
+            <i style="--h:41%"></i><i style="--h:36%"></i><i style="--h:52%"></i><i style="--h:61%"></i>
+            <i style="--h:55%"></i><i style="--h:74%"></i><i style="--h:88%"></i><i style="--h:100%"></i>
+          </div>
+        </div>
+
+        <!-- Brands served. -->
+        <div class="card b-side p-6 sm:p-7 reveal">
+          <div>
+            <p class="eyebrow">Brands served</p>
+            <p class="b-sub mt-3 accent"><span data-count="67" data-suffix="+">0</span></p>
+          </div>
+          <p class="muted text-sm mt-4">Creators, coaches, consultants and niche businesses.</p>
+          <div class="tile-rule" aria-hidden="true"></div>
+        </div>
+
+        <!-- Time in the space. Written as a range, so not animated. -->
+        <div class="card b-side p-6 sm:p-7 reveal">
+          <div>
+            <p class="eyebrow">In short-form</p>
+            <p class="b-sub mt-3 accent">2&#8211;3 yrs</p>
+          </div>
+          <p class="muted text-sm mt-4">Hands-on across multiple niches, not one.</p>
+          <div class="tile-rule" aria-hidden="true"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+
+
+
+
+  <!-- ===================================================================
+       FAQ
+       The questions that come up most often before a first call. Each row
+       is: .faq wrapper > button + .faq-body.
+       To add one, copy a whole .faq block — the script picks it up with no
+       further wiring.
+       =================================================================== -->
+  <section id="faq" class="py-24 sm:py-32" style="background:var(--bg2)">
+    <div class="max-w-3xl mx-auto px-5 sm:px-6">
+
+      <div class="reveal text-center">
+        <p class="eyebrow">FAQ</p>
+        <h2 class="h-display text-4xl sm:text-5xl mt-3">Questions we hear most.</h2>
+      </div>
+
+      <div class="mt-10 grid gap-3" id="faqList">
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Can I choose editing only, strategy only, or both?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">Yes. Choose video editing, content strategy, or both, depending on what you need.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">How does the process work after I start a chat?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">We'll talk with you to understand your business, your goals and the kind of content you need. Then we agree on a plan, coordinate the work with our editors and help with your content. If posting is included in your plan, we handle that too.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">What do you need from me to get started?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">Access to your raw clips and footage. That's it. You never edit a thing.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Do you post the videos for me?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">We can edit your videos and help with posting, depending on the plan we agree on — we'll confirm exactly what's included. Every edit is delivered ready to post, with captions and CTAs, so you or your team just hit upload.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">Will this actually make a difference — and do you understand my niche?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">We've spent 2–3 years building established Instagram pages across different niches, generating 850M+ views. Stronger hooks, editing and structure help more of the right people stop and watch.</p></div></div></div>
+        <div class="faq card !rounded-2xl reveal"><button class="w-full flex items-center justify-between gap-4 text-left p-5 font-bold text-lg" aria-expanded="false">What does it cost?<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus faq-icon w-5 h-5 accent shrink-0" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button><div class="faq-body"><div><p class="muted px-5 pb-5">Plans are tailored to your needs and agreed in a personal chat — start one below.</p></div></div></div>
+      </div>
+    </div>
+  </section>
+
+
+  </main>
+
+
+  <!-- ===================================================================
+       FOOTER
+       Closing call to action, then four columns of links.
+       TO DO: the Privacy Policy and Terms links point at "#" and need real
+       pages — they are legally required in most markets.
+       =================================================================== -->
+  <footer class="relative overflow-hidden pt-20 pb-10" style="background:var(--bg2);border-top:1px solid var(--line)">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+
+      <!-- Full-width accent band: the last chance to convert. -->
+      <div class="band relative rounded-3xl p-8 sm:p-12 overflow-hidden reveal" style="background:var(--accent);color:#fff">
+        <!-- Soft white glow that lifts the flat orange and follows the
+             pointer across the band. -->
+        <div class="band-glow" aria-hidden="true"></div>
+        <div class="relative flex flex-wrap items-center justify-between gap-8">
+          <div class="max-w-lg">
+            <h2 class="h-display text-3xl sm:text-4xl">Your next video could be the one that lands.</h2>
+            <p class="mt-3 opacity-90">Send your raw clips. We'll handle the rest — hooks, edits, captions and CTAs, ready to post.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm class="btn" style="background:#101011;color:#fff">Start a chat <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-5 h-5" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+            <a href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" class="btn" style="border:1px solid rgba(255,255,255,.55);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg> @boldx.io</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Link columns: one per row on phones, a 2x2 block on tablets,
+           four across from 1024px. The link lists use .footer-links rather
+           than a gap utility — see the stylesheet for why that matters. -->
+      <div class="grid gap-y-10 gap-x-8 sm:grid-cols-2 lg:gap-12 lg:grid-cols-[1.5fr_.75fr_.75fr_1.3fr] mt-16">
+
+        <!-- Brand column. The -ml-2 pulls ".io" tight against "Boldx", so
+             the two spans must stay on one line with no space between. -->
+        <div>
+          <a href="#top" class="flex items-center gap-2 font-bold text-2xl" aria-label="Boldx.io home">
+            <span class="w-9 h-9 rounded-xl grid place-items-center text-lg" style="background:var(--accent);color:#fff">B</span>
+            Boldx<span class="accent -ml-2">.io</span>
+          </a>
+          <p class="muted mt-4 max-w-xs text-lg">Sharp edits. Clear strategy. Consistent content.</p>
+          <p class="muted mt-4 text-sm flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe w-4 h-4 accent" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> Working worldwide · English</p>
+          <div class="flex gap-3 mt-6">
+            <a class="btn btn-ghost btn-icon" href="https://www.instagram.com/boldx.io" target="_blank" rel="noopener" aria-label="Boldx.io on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg></a>
+            <a class="btn btn-ghost btn-icon" href="mailto:Boldx.iobusiness@gmail.com" aria-label="Email Boldx.io"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail w-5 h-5" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></a>
+          </div>
+        </div>
+
+        <nav aria-label="Pages">
+          <p class="footer-head">Explore</p>
+          <ul class="footer-links muted">
+            <li><a class="hover:text-[var(--text)] transition" href="#process">Process</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Services</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#results">Results</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Services">
+          <p class="footer-head">What we do</p>
+          <ul class="footer-links muted">
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Video editing</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#services">Content strategy</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="#faq">FAQ</a></li>
+            <li><a class="hover:text-[var(--text)] transition" href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" data-dm>Start a chat</a></li>
+          </ul>
+        </nav>
+
+        <!-- Replaced the newsletter sign-up that used to sit here. It was
+             front-end only: it validated an address, said "you're on the
+             list", and stored nothing. With no list behind it that is a
+             promise the page cannot keep, so this column now points at
+             the one channel that does work. -->
+        <div>
+          <p class="footer-head">Get in touch</p>
+          <p class="muted mb-5 max-w-sm">A DM is the quickest way to reach us. Tell us what you're posting now and what you'd like to improve.</p>
+          <a href="https://ig.me/m/boldx.io" target="_blank" rel="noopener noreferrer" class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none"/></svg> Message us on Instagram</a>
+          <p class="muted text-sm mt-4">Prefer email? <a class="accent font-bold" href="mailto:Boldx.iobusiness@gmail.com">Boldx.iobusiness@gmail.com</a></p>
+        </div>
+      </div>
+
+      <!-- Closing wordmark. Outlined rather than filled so it reads as a
+           watermark closing the page off, not another headline competing
+           for attention. Decorative, so it is hidden from screen readers
+           — the real brand name is in the column above. -->
+      <div class="brandmark" aria-hidden="true">BOLDX<span class="bm-io">.IO</span></div>
+
+      <!-- Legal line. The year is filled in by script so it never goes
+           stale. Keep the spans inline or the spacing changes. -->
+      <div class="mt-8 pt-6 flex flex-wrap items-center justify-between gap-4 text-sm muted" style="border-top:1px solid var(--line)">
+        <p>© <span id="yr"></span> Boldx.io · <a class="hover:text-[var(--text)] transition" href="mailto:Boldx.iobusiness@gmail.com">Boldx.iobusiness@gmail.com</a></p>
+        <p class="flex gap-5"><a class="hover:text-[var(--text)] transition" href="#">Privacy Policy</a><a class="hover:text-[var(--text)] transition" href="#">Terms</a></p>
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- Lenis 1.1.20 — smooth wheel scrolling. MIT licence,
+       https://github.com/darkroomengineering/lenis -->
+  <script>function t(t,i,e){return Math.max(t,Math.min(i,e))}var i=class{isRunning=!1;value=0;from=0;to=0;currentTime=0;lerp;duration;easing;onUpdate;advance(i){if(!this.isRunning)return;let e=!1;if(this.duration&&this.easing){this.currentTime+=i;const s=t(0,this.currentTime/this.duration,1);e=s>=1;const o=e?1:this.easing(s);this.value=this.from+(this.to-this.from)*o}else this.lerp?(this.value=function(t,i,e,s){return function(t,i,e){return(1-e)*t+e*i}(t,i,1-Math.exp(-e*s))}(this.value,this.to,60*this.lerp,i),Math.round(this.value)===this.to&&(this.value=this.to,e=!0)):(this.value=this.to,e=!0);e&&this.stop(),this.onUpdate?.(this.value,e)}stop(){this.isRunning=!1}fromTo(t,i,{lerp:e,duration:s,easing:o,onStart:n,onUpdate:r}){this.from=this.value=t,this.to=i,this.lerp=e,this.duration=s,this.easing=o,this.currentTime=0,this.isRunning=!0,n?.(),this.onUpdate=r}};var e=class{constructor(t,i,{autoResize:e=!0,debounce:s=250}={}){this.wrapper=t,this.content=i,e&&(this.debouncedResize=function(t,i){let e;return function(...s){let o=this;clearTimeout(e),e=setTimeout((()=>{e=void 0,t.apply(o,s)}),i)}}(this.resize,s),this.wrapper instanceof Window?window.addEventListener("resize",this.debouncedResize,!1):(this.wrapperResizeObserver=new ResizeObserver(this.debouncedResize),this.wrapperResizeObserver.observe(this.wrapper)),this.contentResizeObserver=new ResizeObserver(this.debouncedResize),this.contentResizeObserver.observe(this.content)),this.resize()}width=0;height=0;scrollHeight=0;scrollWidth=0;debouncedResize;wrapperResizeObserver;contentResizeObserver;destroy(){this.wrapperResizeObserver?.disconnect(),this.contentResizeObserver?.disconnect(),this.wrapper===window&&this.debouncedResize&&window.removeEventListener("resize",this.debouncedResize,!1)}resize=()=>{this.onWrapperResize(),this.onContentResize()};onWrapperResize=()=>{this.wrapper instanceof Window?(this.width=window.innerWidth,this.height=window.innerHeight):(this.width=this.wrapper.clientWidth,this.height=this.wrapper.clientHeight)};onContentResize=()=>{this.wrapper instanceof Window?(this.scrollHeight=this.content.scrollHeight,this.scrollWidth=this.content.scrollWidth):(this.scrollHeight=this.wrapper.scrollHeight,this.scrollWidth=this.wrapper.scrollWidth)};get limit(){return{x:this.scrollWidth-this.width,y:this.scrollHeight-this.height}}},s=class{events={};emit(t,...i){let e=this.events[t]||[];for(let t=0,s=e.length;t<s;t++)e[t]?.(...i)}on(t,i){return this.events[t]?.push(i)||(this.events[t]=[i]),()=>{this.events[t]=this.events[t]?.filter((t=>i!==t))}}off(t,i){this.events[t]=this.events[t]?.filter((t=>i!==t))}destroy(){this.events={}}},o=100/6,n={passive:!1},r=class{constructor(t,i={wheelMultiplier:1,touchMultiplier:1}){this.element=t,this.options=i,window.addEventListener("resize",this.onWindowResize,!1),this.onWindowResize(),this.element.addEventListener("wheel",this.onWheel,n),this.element.addEventListener("touchstart",this.onTouchStart,n),this.element.addEventListener("touchmove",this.onTouchMove,n),this.element.addEventListener("touchend",this.onTouchEnd,n)}touchStart={x:0,y:0};lastDelta={x:0,y:0};window={width:0,height:0};emitter=new s;on(t,i){return this.emitter.on(t,i)}destroy(){this.emitter.destroy(),window.removeEventListener("resize",this.onWindowResize,!1),this.element.removeEventListener("wheel",this.onWheel,n),this.element.removeEventListener("touchstart",this.onTouchStart,n),this.element.removeEventListener("touchmove",this.onTouchMove,n),this.element.removeEventListener("touchend",this.onTouchEnd,n)}onTouchStart=t=>{const{clientX:i,clientY:e}=t.targetTouches?t.targetTouches[0]:t;this.touchStart.x=i,this.touchStart.y=e,this.lastDelta={x:0,y:0},this.emitter.emit("scroll",{deltaX:0,deltaY:0,event:t})};onTouchMove=t=>{const{clientX:i,clientY:e}=t.targetTouches?t.targetTouches[0]:t,s=-(i-this.touchStart.x)*this.options.touchMultiplier,o=-(e-this.touchStart.y)*this.options.touchMultiplier;this.touchStart.x=i,this.touchStart.y=e,this.lastDelta={x:s,y:o},this.emitter.emit("scroll",{deltaX:s,deltaY:o,event:t})};onTouchEnd=t=>{this.emitter.emit("scroll",{deltaX:this.lastDelta.x,deltaY:this.lastDelta.y,event:t})};onWheel=t=>{let{deltaX:i,deltaY:e,deltaMode:s}=t;i*=1===s?o:2===s?this.window.width:1,e*=1===s?o:2===s?this.window.height:1,i*=this.options.wheelMultiplier,e*=this.options.wheelMultiplier,this.emitter.emit("scroll",{deltaX:i,deltaY:e,event:t})};onWindowResize=()=>{this.window={width:window.innerWidth,height:window.innerHeight}}},Lenis=class{_isScrolling=!1;_isStopped=!1;_isLocked=!1;_preventNextNativeScrollEvent=!1;_resetVelocityTimeout=null;__rafID=null;isTouching;time=0;userData={};lastVelocity=0;velocity=0;direction=0;options;targetScroll;animatedScroll;animate=new i;emitter=new s;dimensions;virtualScroll;constructor({wrapper:t=window,content:i=document.documentElement,eventsTarget:s=t,smoothWheel:o=!0,syncTouch:n=!1,syncTouchLerp:l=.075,touchInertiaMultiplier:h=35,duration:a,easing:c=t=>Math.min(1,1.001-Math.pow(2,-10*t)),lerp:p=.1,infinite:d=!1,orientation:u="vertical",gestureOrientation:m="vertical",touchMultiplier:v=1,wheelMultiplier:S=1,autoResize:w=!0,prevent:g,virtualScroll:f,overscroll:y=!0,autoRaf:E=!1,anchors:T=!1,__experimental__naiveDimensions:z=!1}={}){window.lenisVersion="1.1.20",t&&t!==document.documentElement||(t=window),this.options={wrapper:t,content:i,eventsTarget:s,smoothWheel:o,syncTouch:n,syncTouchLerp:l,touchInertiaMultiplier:h,duration:a,easing:c,lerp:p,infinite:d,gestureOrientation:m,orientation:u,touchMultiplier:v,wheelMultiplier:S,autoResize:w,prevent:g,virtualScroll:f,overscroll:y,autoRaf:E,anchors:T,__experimental__naiveDimensions:z},this.dimensions=new e(t,i,{autoResize:w}),this.updateClassName(),this.targetScroll=this.animatedScroll=this.actualScroll,this.options.wrapper.addEventListener("scroll",this.onNativeScroll,!1),this.options.wrapper.addEventListener("scrollend",this.onScrollEnd,{capture:!0}),this.options.anchors&&this.options.wrapper===window&&this.options.wrapper.addEventListener("click",this.onClick,!1),this.options.wrapper.addEventListener("pointerdown",this.onPointerDown,!1),this.virtualScroll=new r(s,{touchMultiplier:v,wheelMultiplier:S}),this.virtualScroll.on("scroll",this.onVirtualScroll),this.options.autoRaf&&(this.__rafID=requestAnimationFrame(this.raf))}destroy(){this.emitter.destroy(),this.options.wrapper.removeEventListener("scroll",this.onNativeScroll,!1),this.options.wrapper.removeEventListener("scrollend",this.onScrollEnd,{capture:!0}),this.options.wrapper.removeEventListener("pointerdown",this.onPointerDown,!1),this.options.anchors&&this.options.wrapper===window&&this.options.wrapper.removeEventListener("click",this.onClick,!1),this.virtualScroll.destroy(),this.dimensions.destroy(),this.cleanUpClassName(),this.__rafID&&cancelAnimationFrame(this.__rafID)}on(t,i){return this.emitter.on(t,i)}off(t,i){return this.emitter.off(t,i)}onScrollEnd=t=>{t instanceof CustomEvent||"smooth"!==this.isScrolling&&!1!==this.isScrolling||t.stopPropagation()};dispatchScrollendEvent=()=>{this.options.wrapper.dispatchEvent(new CustomEvent("scrollend",{bubbles:this.options.wrapper===window,detail:{lenisScrollEnd:!0}}))};setScroll(t){this.isHorizontal?this.options.wrapper.scrollTo({left:t,behavior:"instant"}):this.options.wrapper.scrollTo({top:t,behavior:"instant"})}onClick=t=>{const i=t.composedPath().find((t=>t instanceof HTMLAnchorElement&&t.getAttribute("href")?.startsWith("#")));if(i){const t=i.getAttribute("href");if(t){const i="object"==typeof this.options.anchors&&this.options.anchors?this.options.anchors:void 0;this.scrollTo(t,i)}}};onPointerDown=t=>{1===t.button&&this.reset()};onVirtualScroll=t=>{if("function"==typeof this.options.virtualScroll&&!1===this.options.virtualScroll(t))return;const{deltaX:i,deltaY:e,event:s}=t;if(this.emitter.emit("virtual-scroll",{deltaX:i,deltaY:e,event:s}),s.ctrlKey)return;if(s.lenisStopPropagation)return;const o=s.type.includes("touch"),n=s.type.includes("wheel");this.isTouching="touchstart"===s.type||"touchmove"===s.type;const r=0===i&&0===e;if(this.options.syncTouch&&o&&"touchstart"===s.type&&r&&!this.isStopped&&!this.isLocked)return void this.reset();const l="vertical"===this.options.gestureOrientation&&0===e||"horizontal"===this.options.gestureOrientation&&0===i;if(r||l)return;let h=s.composedPath();h=h.slice(0,h.indexOf(this.rootElement));const a=this.options.prevent;if(h.find((t=>t instanceof HTMLElement&&("function"==typeof a&&a?.(t)||t.hasAttribute?.("data-lenis-prevent")||o&&t.hasAttribute?.("data-lenis-prevent-touch")||n&&t.hasAttribute?.("data-lenis-prevent-wheel")))))return;if(this.isStopped||this.isLocked)return void s.preventDefault();if(!(this.options.syncTouch&&o||this.options.smoothWheel&&n))return this.isScrolling="native",this.animate.stop(),void(s.lenisStopPropagation=!0);let c=e;"both"===this.options.gestureOrientation?c=Math.abs(e)>Math.abs(i)?e:i:"horizontal"===this.options.gestureOrientation&&(c=i),(!this.options.overscroll||this.options.infinite||this.options.wrapper!==window&&(this.animatedScroll>0&&this.animatedScroll<this.limit||0===this.animatedScroll&&e>0||this.animatedScroll===this.limit&&e<0))&&(s.lenisStopPropagation=!0),s.preventDefault();const p=o&&this.options.syncTouch,d=o&&"touchend"===s.type&&Math.abs(c)>5;d&&(c=this.velocity*this.options.touchInertiaMultiplier),this.scrollTo(this.targetScroll+c,{programmatic:!1,...p?{lerp:d?this.options.syncTouchLerp:1}:{lerp:this.options.lerp,duration:this.options.duration,easing:this.options.easing}})};resize(){this.dimensions.resize(),this.animatedScroll=this.targetScroll=this.actualScroll,this.emit()}emit(){this.emitter.emit("scroll",this)}onNativeScroll=()=>{if(null!==this._resetVelocityTimeout&&(clearTimeout(this._resetVelocityTimeout),this._resetVelocityTimeout=null),this._preventNextNativeScrollEvent)this._preventNextNativeScrollEvent=!1;else if(!1===this.isScrolling||"native"===this.isScrolling){const t=this.animatedScroll;this.animatedScroll=this.targetScroll=this.actualScroll,this.lastVelocity=this.velocity,this.velocity=this.animatedScroll-t,this.direction=Math.sign(this.animatedScroll-t),this.isStopped||(this.isScrolling="native"),this.emit(),0!==this.velocity&&(this._resetVelocityTimeout=setTimeout((()=>{this.lastVelocity=this.velocity,this.velocity=0,this.isScrolling=!1,this.emit()}),400))}};reset(){this.isLocked=!1,this.isScrolling=!1,this.animatedScroll=this.targetScroll=this.actualScroll,this.lastVelocity=this.velocity=0,this.animate.stop()}start(){this.isStopped&&(this.reset(),this.isStopped=!1)}stop(){this.isStopped||(this.reset(),this.isStopped=!0)}raf=t=>{const i=t-(this.time||t);this.time=t,this.animate.advance(.001*i),this.options.autoRaf&&(this.__rafID=requestAnimationFrame(this.raf))};scrollTo(i,{offset:e=0,immediate:s=!1,lock:o=!1,duration:n=this.options.duration,easing:r=this.options.easing,lerp:l=this.options.lerp,onStart:h,onComplete:a,force:c=!1,programmatic:p=!0,userData:d}={}){if(!this.isStopped&&!this.isLocked||c){if("string"==typeof i&&["top","left","start"].includes(i))i=0;else if("string"==typeof i&&["bottom","right","end"].includes(i))i=this.limit;else{let t;if("string"==typeof i?t=document.querySelector(i):i instanceof HTMLElement&&i?.nodeType&&(t=i),t){if(this.options.wrapper!==window){const t=this.rootElement.getBoundingClientRect();e-=this.isHorizontal?t.left:t.top}const s=t.getBoundingClientRect();i=(this.isHorizontal?s.left:s.top)+this.animatedScroll}}if("number"==typeof i){if(i+=e,i=Math.round(i),this.options.infinite?p&&(this.targetScroll=this.animatedScroll=this.scroll):i=t(0,i,this.limit),i===this.targetScroll)return h?.(this),void a?.(this);if(this.userData=d??{},s)return this.animatedScroll=this.targetScroll=i,this.setScroll(this.scroll),this.reset(),this.preventNextNativeScrollEvent(),this.emit(),a?.(this),this.userData={},void requestAnimationFrame((()=>{this.dispatchScrollendEvent()}));p||(this.targetScroll=i),this.animate.fromTo(this.animatedScroll,i,{duration:n,easing:r,lerp:l,onStart:()=>{o&&(this.isLocked=!0),this.isScrolling="smooth",h?.(this)},onUpdate:(t,i)=>{this.isScrolling="smooth",this.lastVelocity=this.velocity,this.velocity=t-this.animatedScroll,this.direction=Math.sign(this.velocity),this.animatedScroll=t,this.setScroll(this.scroll),p&&(this.targetScroll=t),i||this.emit(),i&&(this.reset(),this.emit(),a?.(this),this.userData={},requestAnimationFrame((()=>{this.dispatchScrollendEvent()})),this.preventNextNativeScrollEvent())}})}}}preventNextNativeScrollEvent(){this._preventNextNativeScrollEvent=!0,requestAnimationFrame((()=>{this._preventNextNativeScrollEvent=!1}))}get rootElement(){return this.options.wrapper===window?document.documentElement:this.options.wrapper}get limit(){return this.options.__experimental__naiveDimensions?this.isHorizontal?this.rootElement.scrollWidth-this.rootElement.clientWidth:this.rootElement.scrollHeight-this.rootElement.clientHeight:this.dimensions.limit[this.isHorizontal?"x":"y"]}get isHorizontal(){return"horizontal"===this.options.orientation}get actualScroll(){const t=this.options.wrapper;return this.isHorizontal?t.scrollX??t.scrollLeft:t.scrollY??t.scrollTop}get scroll(){return this.options.infinite?(t=this.animatedScroll,i=this.limit,(t%i+i)%i):this.animatedScroll;var t,i}get progress(){return 0===this.limit?1:this.scroll/this.limit}get isScrolling(){return this._isScrolling}set isScrolling(t){this._isScrolling!==t&&(this._isScrolling=t,this.updateClassName())}get isStopped(){return this._isStopped}set isStopped(t){this._isStopped!==t&&(this._isStopped=t,this.updateClassName())}get isLocked(){return this._isLocked}set isLocked(t){this._isLocked!==t&&(this._isLocked=t,this.updateClassName())}get isSmooth(){return"smooth"===this.isScrolling}get className(){let t="lenis";return this.isStopped&&(t+=" lenis-stopped"),this.isLocked&&(t+=" lenis-locked"),this.isScrolling&&(t+=" lenis-scrolling"),"smooth"===this.isScrolling&&(t+=" lenis-smooth"),t}updateClassName(){this.cleanUpClassName(),this.rootElement.className=`${this.rootElement.className} ${this.className}`.trim()}cleanUpClassName(){this.rootElement.className=this.rootElement.className.replace(/lenis(-\w+)?/g,"").trim()}};globalThis.Lenis=Lenis,globalThis.Lenis.prototype=Lenis.prototype;</script>
+
+  <!-- =====================================================================
+       8. SCRIPT
+       Plain JavaScript, no framework. The script sits at the end of <body>
+       so every element it reaches for already exists — which is why there
+       is no DOMContentLoaded wrapper.
+
+       Two flags, REDUCED and FINE, gate most of what follows:
+         REDUCED  the visitor asked their OS to reduce motion
+         FINE     there is a real mouse (not a finger) driving the page
+       Anything decorative checks these before it runs, so phones are not
+       asked to track a cursor that does not exist.
+       ===================================================================== -->
+  <script>
+
+    /* ---- Start-up ---------------------------------------------------- */
+
+    // Icons are inline SVG in the markup, so there is nothing to load or
+    // swap in here. To add one, copy its <svg> from lucide.dev.
+
+    // Copyright year, so the footer never goes out of date.
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    /* Where every "Start a chat" goes: straight into the Instagram DM.
+       The links carry this address in their own href, so they work even
+       if this script never runs. Each is also tagged data-dm, and the line
+       below re-points them all from here — so a change of handle is a
+       one-line edit, as long as the href in the markup is updated too
+       for visitors without JavaScript. */
+    const IG_DM = 'https://ig.me/m/boldx.io';
+    document.querySelectorAll('a[data-dm]').forEach(a => a.href = IG_DM);
+
+
+    /* ---- Theme toggle -------------------------------------------------
+       Dark is the default. The choice is remembered in localStorage, which
+       is wrapped in try/catch because it throws in private-browsing modes
+       and when cookies are blocked — a failure there must not take the
+       rest of the page down with it. */
+
+    /* Declared here rather than further down because setTheme consults
+       REDUCED, and the first call happens immediately below. */
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const FINE = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    const root = document.documentElement,
+          themeBtn = document.getElementById('themeBtn');
+
+    /* The toggle's two icons, written out rather than fetched from the
+       icon library, so swapping them is a single innerHTML write. */
+    const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="w-5 h-5" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    const ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+
+    function applyTheme(t) {
+      // One attribute on <html> re-points every colour variable.
+      root.setAttribute('data-theme', t);
+      try { localStorage.setItem('bx-theme', t); } catch (e) {}
+
+      // Show the icon for the mode you would switch TO.
+      themeBtn.innerHTML = t === 'dark' ? ICON_SUN : ICON_MOON;
+    }
+
+    /* Marks the page "busy" so the stylesheet can suspend transitions and
+       pause every running animation. Held for as long as the caller needs
+       it — two frames for an instant swap, the full wipe otherwise. */
+    function themeBusy(on) { root.classList.toggle('theme-busy', on); }
+
+    /* The circular wipe.
+
+       It is not free: the browser snapshots the viewport twice and
+       composites them, and this page carries several blurred and frosted
+       layers. What made it expensive was everything else still animating
+       into that composite — so the stylesheet now pauses the lot for the
+       duration (see html.theme-busy), which is what makes it affordable
+       on a phone.
+
+       Set to false for an instant swap instead. It is skipped
+       automatically under reduced motion, or in a browser without the
+       View Transitions API. */
+    const USE_THEME_WIPE = true;
+
+    /* How long the circle takes to cross the screen. Unhurried enough to
+       read as a deliberate transition rather than a flicker, and a little
+       shorter on phones, where every frame composites two full-screen
+       snapshots. */
+    const WIPE_MS = innerWidth < 768 ? 520 : 620;
+
+    /* How many steps the wipe is sampled into. See buildWipeFrames below;
+       24 is past the point where more makes any visible difference. */
+    const WIPE_STEPS = 24;
+
+    /* ---- The shape of the wipe ------------------------------------------
+       What the eye reads as "how far has this got" is the AREA the new
+       theme covers, and the area of a circle grows with the SQUARE of its
+       radius. Animating the radius straight from 0 to full with an
+       ease-out therefore looks nothing like an even sweep: measured off a
+       recording of a real phone, it covered 84% of the screen in the first
+       quarter of its run and then spent the remaining three quarters
+       creeping through the last 16% — read as a lurch followed by a stall.
+
+       Sampling the radius as sqrt(easeInOutSine(t)) inverts that square:
+       the COVERED AREA follows a smooth ease-in-out, so the edge travels
+       at an even, unhurried speed and settles without a tail. The square
+       root also cancels cleanly at both ends — the radius leaves 0 and
+       arrives at full linearly, so there is no pop at the start and no
+       drag at the finish. */
+    function buildWipeFrames(x, y, end) {
+      const frames = [];
+      for (let i = 0; i <= WIPE_STEPS; i++) {
+        const t = i / WIPE_STEPS;
+        const area = (1 - Math.cos(Math.PI * t)) / 2;        // easeInOutSine
+        const r = end * Math.sqrt(area);                     // undo the r² 
+        frames.push({
+          clipPath: 'circle(' + r.toFixed(1) + 'px at ' + x + 'px ' + y + 'px)',
+          offset: t
+        });
+      }
+      return frames;
+    }
+
+    /* MEASURED COST: the wipe runs about half again as expensive as an
+       instant swap, on phone and desktop alike. That is the double
+       snapshot the View Transitions API has to take, and it cannot be
+       tuned away — what IS tuned away, above and in html.theme-busy, is
+       everything that used to repaint underneath it.
+
+       If it still feels heavy on a particular phone, set USE_THEME_WIPE
+       to false for an instant swap. With the colour transitions
+       suppressed that reads as a clean snap, not a flicker. */
+
+    /* Switches the theme. With the wipe enabled and supported, the new
+       palette is revealed by a circle growing out of the toggle button,
+       so the change has a source. Otherwise it applies instantly, which
+       with the transition suppression above is effectively free. */
+    function setTheme(t, ev) {
+      if (!USE_THEME_WIPE || !ev || REDUCED || !document.startViewTransition) {
+        // Instant path: suspend transitions for the two frames it takes
+        // the new palette to paint, then let everything resume.
+        themeBusy(true);
+        applyTheme(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => themeBusy(false)));
+        return;
+      }
+
+      // Start from the centre of the button that was clicked.
+      const r = themeBtn.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      // Radius needed to reach the furthest corner of the viewport.
+      const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+
+      // Freeze the page BEFORE the snapshot is taken, and keep it frozen
+      // until the wipe has finished, so nothing repaints underneath it.
+      themeBusy(true);
+
+      const vt = document.startViewTransition(() => applyTheme(t));
+
+      vt.ready.then(() => {
+        // 'linear' here is deliberate: the curve is already baked into the
+        // sampled radii, and layering an easing on top would bend it twice.
+        document.documentElement.animate(
+          buildWipeFrames(x, y, end),
+          { duration: WIPE_MS, easing: 'linear', pseudoElement: '::view-transition-new(root)' }
+        );
+      }).catch(() => {});   // a cancelled transition is not an error
+
+      // finally(): resume even if the transition was interrupted, or the
+      // page would stay frozen for good.
+      vt.finished.catch(() => {}).finally(() => themeBusy(false));
+    }
+
+    let saved = null;
+    try { saved = localStorage.getItem('bx-theme'); } catch (e) {}
+    setTheme(saved || 'dark');
+
+    themeBtn.addEventListener('click', ev =>
+      setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', ev)
+    );
+
+
+    /* ---- Mobile menu --------------------------------------------------- */
+
+    const menuBtn = document.getElementById('menuBtn'),
+          mm = document.getElementById('mobileMenu');
+
+    menuBtn.addEventListener('click', () => {
+      // classList.toggle returns whether the class is now present, so
+      // "=== false" reads as "the menu is now open".
+      const open = mm.classList.toggle('hidden') === false;
+      menuBtn.setAttribute('aria-expanded', open);
+    });
+
+    // Close the menu after tapping any link inside it, otherwise it stays
+    // open over the section the visitor just jumped to.
+    mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      mm.classList.add('hidden');
+      menuBtn.setAttribute('aria-expanded', false);
+    }));
+
+
+    /* ---- Scroll reveal, with stagger -----------------------------------
+       Elements marked .reveal fade in when scrolled to. Items sharing a
+       parent are delayed 90ms apart so a row of cards arrives in sequence
+       rather than all at once. The delay is capped at 6 steps, so a long
+       list never leaves the last item waiting. */
+
+    const groups = new Map();   // parent element -> how many seen so far
+
+    document.querySelectorAll('.reveal').forEach(el => {
+      const p = el.parentElement;
+      if (!groups.has(p)) groups.set(p, 0);
+      const i = groups.get(p);
+      groups.set(p, i + 1);
+      if (!REDUCED) el.style.transitionDelay = Math.min(i, 6) * 90 + 'ms';
+    });
+
+    // threshold .12 fires once about an eighth of the element is visible.
+    // Each element is unobserved after revealing — it only animates once.
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    }), { threshold: .12 });
+
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    /* ---- Park animations that nobody can see --------------------------
+       Every looping decoration on this page (the aurora drift, the grain,
+       the waveform bars, the marquee, the floating chips) carries on
+       animating while it is scrolled far off screen, and each one costs a
+       repaint on every frame. Measured on a throttled phone, parking the
+       off-screen ones took scrolling from ~27fps to ~55fps — the same gain
+       as switching every animation off, but with nothing to see.
+
+       Sections are the unit rather than individual elements: one observer
+       entry covers everything inside, and it keeps working for animations
+       added later by other scripts on this page.
+
+       The 250px margin means a section is running again before it can
+       appear, so the first frame a visitor sees is never a paused one. */
+    const park = new IntersectionObserver(es => es.forEach(e => {
+      e.target.classList.toggle('anim-park', !e.isIntersecting);
+    }), { rootMargin: '250px 0px' });
+
+    document.querySelectorAll('main > section, footer').forEach(el => park.observe(el));
+
+
+    /* ---- Headline, word by word -----------------------------------------
+       Wraps each word of the <h1> in <span class="w"> and gives it a rising
+       delay, so the headline assembles itself on load.
+
+       Why a recursive text-node walk rather than innerHTML: the headline
+       contains a coloured <span>, and rewriting innerHTML would flatten it.
+       This visits text nodes only (nodeType 3) and leaves elements intact.
+       Splitting on /(\s+)/ keeps the whitespace as its own array entry, so
+       the spaces between words survive. */
+
+    const h1 = document.querySelector('h1.h-display');
+
+    if (h1 && !REDUCED) {
+      // Hand control to the per-word animation: drop the block-level
+      // reveal, otherwise both would fight over the same opacity.
+      h1.classList.remove('reveal');
+      h1.style.opacity = 1;
+      h1.style.transform = 'none';
+
+      (function split(node) {
+        [...node.childNodes].forEach(n => {
+          if (n.nodeType === 3) {                 // a text node
+            const frag = document.createDocumentFragment();
+            n.textContent.split(/(\s+)/).forEach(part => {
+              if (!part.trim()) {                 // whitespace: keep as-is
+                frag.appendChild(document.createTextNode(part));
+                return;
+              }
+              const s = document.createElement('span');
+              s.className = 'w';
+              s.textContent = part;
+              frag.appendChild(s);
+            });
+            n.replaceWith(frag);
+          } else if (n.nodeType === 1) {          // an element: recurse
+            split(n);
+          }
+        });
+      })(h1);
+
+      // 120ms before the first word, then 55ms between each.
+      h1.querySelectorAll('.w').forEach((w, i) =>
+        w.style.animationDelay = (120 + i * 55) + 'ms'
+      );
+    }
+
+    /* The same split for every section heading. These words ride the
+       reveal observer instead of playing on load: the CSS shows them once
+       the heading's block has .in. A heading outside a .reveal block would
+       never get that, so it is left alone. */
+    function splitWords(node, cls, out) {
+      [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(part => {
+            if (!part.trim()) { frag.appendChild(document.createTextNode(part)); return; }
+            const s = document.createElement('span');
+            s.className = cls;
+            s.textContent = part;
+            frag.appendChild(s);
+            out.push(s);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1) {
+          splitWords(n, cls, out);
+        }
+      });
+      return out;
+    }
+
+    if (!REDUCED) document.querySelectorAll('h2.h-display').forEach(h2 => {
+      if (!h2.closest('.reveal')) return;
+      splitWords(h2, 'w2', []).forEach((w, i) => w.style.transitionDelay = (140 + i * 45) + 'ms');
+    });
+
+
+    /* ---- Scroll handler -------------------------------------------------
+       One listener drives three things: the progress bar, the auto-hiding
+       nav, and the parallax drift. Scroll events fire faster than the
+       screen refreshes, so the work is deferred to requestAnimationFrame
+       and the "ticking" flag drops any extra events in between. passive
+       tells the browser we will never preventDefault, which keeps
+       scrolling smooth. */
+
+    const bar = document.getElementById('progress');
+    const head = document.querySelector('header');
+    let lastY = 0, ticking = false;
+
+    // The two scroll-driven sections further down (the statement and the
+    // process rail) are wired up later in this script, but onScroll runs
+    // before that. Deliberately "var": it is hoisted and starts undefined,
+    // so reading it here is safe, whereas touching a let/const before its
+    // declaration throws and would take the rest of the script with it.
+    var extrasReady = false;
+
+    /* document.body.scrollHeight and a DOM query were both being read on
+       every scroll frame. Reading scrollHeight forces the browser to lay
+       the page out before it can answer, so this alone guaranteed a
+       layout per frame while scrolling. Both are cached and refreshed on
+       resize instead. */
+    let docHeight = 0;
+    let paraEls = [];
+
+    // Hero scroll-out, marquee velocity and the "has scrolled" flag. var,
+    // not let, for the same hoisting reason as extrasReady above.
+    var heroSec = document.querySelector('main > section'),
+        heroInner = heroSec && heroSec.querySelector('.hero-inner'),
+        heroH = 0, heroOff = false, scrolledFlag = null;
+    let railGeo = null, hlGeo = null;
+    const wide = window.matchMedia('(min-width: 768px)');   // created once
+
+    /* Measures everything the scroll handler needs, once. An element's
+       position in the DOCUMENT only changes when the page reflows, not
+       when it scrolls, so offsets are stored absolutely and the distance
+       to the viewport is worked out by subtracting scrollY. That keeps
+       getBoundingClientRect — which forces a synchronous layout — out of
+       the scroll path entirely. */
+    function measurePage() {
+      docHeight = document.body.scrollHeight;
+      paraEls = [...document.querySelectorAll('[data-para]')].map(el => {
+        const r = el.getBoundingClientRect();
+        return { el, mid: r.top + scrollY + r.height / 2, para: +el.dataset.para };
+      });
+      const rail = document.getElementById('rail');
+      if (rail) {
+        const r = rail.getBoundingClientRect();
+        railGeo = { top: r.top + scrollY, height: r.height };
+      }
+      const hl = document.getElementById('hlLine');
+      if (hl) {
+        const r = hl.getBoundingClientRect();
+        hlGeo = { top: r.top + scrollY };
+      }
+      if (heroSec) heroH = heroSec.offsetHeight;
+    }
+    measurePage();
+    addEventListener('resize', measurePage, { passive: true });
+    // The page gets taller as images and fonts arrive.
+    addEventListener('load', measurePage);
+
+    function onScroll() {
+      const y = window.scrollY,
+            max = docHeight - innerHeight;
+
+      // Progress bar. The max > 0 guard avoids dividing by zero on a page
+      // shorter than the window.
+      bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(y / max, 1) : 0).toFixed(4) + ')';
+
+      // Hide the nav when scrolling DOWN, past 320px, and only while the
+      // mobile menu is shut and nothing inside it holds focus — hiding the
+      // bar under a keyboard user's focus would strand them.
+      if (!REDUCED) head.classList.toggle('hide',
+        y > lastY && y > 320 && !mm.contains(document.activeElement) && mm.classList.contains('hidden'));
+
+      // Fades the scroll cue. Only written when it actually flips.
+      const sc = y > 40;
+      if (sc !== scrolledFlag) { scrolledFlag = sc; root.classList.toggle('scrolled', sc); }
+
+      if (extrasReady && !REDUCED) {
+        feedMarquee(y - lastY);
+        paintHero(y);
+      }
+
+      lastY = y;
+
+      // Parallax. Offset is measured from the element's distance to the
+      // centre of the screen, so it reads zero as it passes the middle and
+      // drifts in opposite directions either side. data-para is the
+      // strength; negative moves against the scroll.
+      if (!REDUCED) paraEls.forEach(p => {
+        const mid = p.mid - y - innerHeight / 2;
+        p.el.style.translate = '0 ' + (mid * p.para).toFixed(1) + 'px';
+      });
+
+      // Scroll-driven sections further down the page. Both are cheap
+      // reads; they live here rather than on their own listeners so the
+      // page still only does layout work once per animation frame. The
+      // flag keeps them out of the early calls, before they exist.
+      if (extrasReady) {
+        paintStatement();
+        paintRail();
+      }
+
+      ticking = false;
+    }
+
+    addEventListener('scroll', () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+    }, { passive: true });
+
+    // Set the initial state, e.g. when the page is reloaded mid-scroll.
+    // Called again at the end of the script, once the scroll-driven
+    // sections below have been wired up.
+    onScroll();
+
+
+    /* ---- Pointer-following glows -----------------------------------------
+       A soft layer that eases toward the pointer while it is over its
+       area, and drifts back to a resting spot ("home", as fractions of the
+       area) when it leaves. Moved by transform only, in a loop that stops
+       as soon as the glow has arrived, so an idle page does no work.
+
+       The area's position is measured once per hover and again only if
+       the page has scrolled, rather than on every mouse move. */
+    function follower(area, el, home, ease) {
+      if (!area || !el) return;
+      let w = 0, h = 0, x = 0, y = 0, tx = 0, ty = 0,
+          raf = null, r = null, ry = -1, inside = false;
+
+      function size() {
+        w = area.offsetWidth; h = area.offsetHeight;
+        if (!inside) { tx = home[0] * w; ty = home[1] * h; }
+      }
+      function draw() {
+        el.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+      }
+      function tick() {
+        x += (tx - x) * ease;
+        y += (ty - y) * ease;
+        draw();
+        if (Math.abs(tx - x) < .4 && Math.abs(ty - y) < .4) { raf = null; return; }
+        raf = requestAnimationFrame(tick);
+      }
+      function kick() { if (raf === null) raf = requestAnimationFrame(tick); }
+
+      size(); x = tx; y = ty; draw();
+      addEventListener('resize', () => { size(); kick(); }, { passive: true });
+
+      if (!FINE || REDUCED) return;      // touch: the glow simply rests at home
+      area.addEventListener('pointerenter', () => { inside = true; r = null; });
+      area.addEventListener('pointermove', e => {
+        if (!r || ry !== scrollY) { r = area.getBoundingClientRect(); ry = scrollY; }
+        tx = e.clientX - r.left;
+        ty = e.clientY - r.top;
+        kick();
+      }, { passive: true });
+      area.addEventListener('pointerleave', () => {
+        inside = false;
+        tx = home[0] * w; ty = home[1] * h;
+        kick();
+      });
+    }
+
+    follower(heroSec, heroSec && heroSec.querySelector('.hero-spot'), [.78, .06], .085);
+    const band = document.querySelector('.band');
+    follower(band, band && band.querySelector('.band-glow'), [.92, .18], .1);
+
+
+    /* ---- Card tilt ------------------------------------------------------
+       Leans each card toward the pointer and moves its glow to match.
+       px/py are 0–1 across the card, so (px - .5) gives -0.5 to +0.5 and
+       the ±5deg range stays subtle — much more and it looks like a toy. */
+
+    /* Second pass: the work is now batched into one write per frame, the
+       card is measured once per hover instead of on every mouse move (the
+       tilt itself changes the rect, so re-measuring fed back into it), and
+       .tilting swaps in a short transition while the pointer is on it.
+       --gx/--gy are pixels, because they drive a transform. */
+    if (FINE && !REDUCED) document.querySelectorAll('.card').forEach(card => {
+      let r = null, ry = -1, px = .5, py = .5, raf = null;
+      // Long FAQ rows tilt less: 5deg across a 70px-tall bar looks wobbly.
+      const k = card.classList.contains('faq') ? .35 : 1;
+
+      function paint() {
+        raf = null;
+        if (!r) return;
+        card.style.setProperty('--gx', (px * r.width).toFixed(1) + 'px');
+        card.style.setProperty('--gy', (py * r.height).toFixed(1) + 'px');
+        // X rotation is inverted: pointer high up tips the top away.
+        card.style.transform = `perspective(900px) rotateX(${((.5 - py) * 5 * k).toFixed(2)}deg) rotateY(${((px - .5) * 5 * k).toFixed(2)}deg) translateY(-4px)`;
+      }
+
+      card.addEventListener('pointerenter', () => { r = null; card.classList.add('tilting'); });
+      card.addEventListener('pointermove', e => {
+        // Skip while the card is still fading in, or the tilt transform
+        // would overwrite the reveal animation mid-flight.
+        if (card.classList.contains('reveal') && !card.classList.contains('in')) return;
+        if (!r || ry !== scrollY) { r = card.getBoundingClientRect(); ry = scrollY; }
+        px = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
+        py = Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1);
+        if (raf === null) raf = requestAnimationFrame(paint);
+      }, { passive: true });
+
+      // Clearing the inline transform hands control back to the CSS, which
+      // eases the card flat again on the long curve.
+      card.addEventListener('pointerleave', () => {
+        if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+        card.classList.remove('tilting');
+        card.style.transform = '';
+      });
+    });
+
+
+    /* ---- Custom cursor --------------------------------------------------
+       Two elements: a dot that tracks the pointer exactly, and a ring that
+       eases along behind it and morphs into the shape of whatever it is
+       over — matching that element's position, size and corner radius.
+
+       The ring is animated in a requestAnimationFrame loop rather than by
+       CSS transition, because its target changes every frame; a transition
+       would always be chasing a stale value. Each frame moves 17–25% of
+       the remaining distance, which gives the trailing, elastic feel. */
+
+    if (FINE && !REDUCED) {
+      const dot = document.getElementById('cur'),
+            ring = document.getElementById('ring');
+
+      // Only hide the real cursor once this code is confirmed running.
+      document.body.classList.add('cursor-on');
+
+      // What the ring will wrap itself around.
+      const SNAP = 'a.btn, button, .chip, .card, .faq > button';
+
+      let mx = innerWidth / 2, my = innerHeight / 2;            // pointer
+      let tx = mx, ty = my, tw = 36, th = 36, tr = 999;          // target
+      let rx = mx, ry = my, rw = 36, rh = 36, rr = 999;          // current
+      let snapped = false, seen = false;
+
+      addEventListener('pointermove', e => {
+        mx = e.clientX;
+        my = e.clientY;
+
+        // On the very first move, place the ring instantly instead of
+        // letting it fly in from the middle of the screen.
+        if (!seen) { seen = true; rx = mx; ry = my; }
+
+        // The dot is positioned directly — no easing, no lag.
+        dot.style.transform = 'translate(' + mx + 'px,' + my + 'px)' +
+          (dot.classList.contains('press') ? ' scale(2.1)' : '');
+
+        const hit = e.target.closest(SNAP);
+        const r = hit && hit.getBoundingClientRect();
+
+        // Only wrap reasonably sized things: a ring stretched around a
+        // full-width card looks broken rather than deliberate.
+        if (r && r.width <= 560 && r.height <= 300) {
+          tx = r.left + r.width / 2;
+          ty = r.top + r.height / 2;
+          tw = r.width + 12;              // slight padding around the target
+          th = r.height + 12;
+          // Match the element's own rounding. The || 14 covers a computed
+          // style that cannot be parsed.
+          tr = Math.min(parseFloat(getComputedStyle(hit).borderTopLeftRadius) + 6 || 14, 999);
+          snapped = true;
+        } else {
+          // Back to a circle: slightly larger over something clickable.
+          tx = mx; ty = my;
+          tw = th = hit ? 56 : 36;
+          tr = 999;
+          snapped = false;
+        }
+
+        ring.classList.toggle('snapped', snapped);
+        kick();
+      }, { passive: true });
+
+      /* The animation loop, which STOPS once the ring has caught up.
+         An always-on rAF here is the single most expensive thing a page
+         like this can do: three of the properties below trigger layout,
+         so leaving it running pinned the whole document to a layout per
+         frame even with the page completely idle. kick() restarts it on
+         the next input. Centring is folded into the transform so the two
+         margin writes disappear as well. */
+      let raf = null;
+
+      function tick() {
+        const ease = snapped ? .22 : .17;   // snap a little more eagerly
+        const dx = tx - rx, dy = ty - ry, dw = tw - rw, dh = th - rh, dr = tr - rr;
+
+        rx += dx * ease; ry += dy * ease;
+        rw += dw * .25;  rh += dh * .25;  rr += dr * .25;
+
+        ring.style.width = rw.toFixed(1) + 'px';
+        ring.style.height = rh.toFixed(1) + 'px';
+        // Cap the radius at half the smaller side, or a small ring would
+        // end up with a radius bigger than itself.
+        ring.style.borderRadius = Math.min(rr, rw / 2, rh / 2).toFixed(1) + 'px';
+        ring.style.transform = 'translate(' + (rx - rw / 2).toFixed(1) + 'px,' + (ry - rh / 2).toFixed(1) + 'px)';
+
+        // Within a sixth of a pixel of the target on every axis: park.
+        if (Math.abs(dx) < .15 && Math.abs(dy) < .15 &&
+            Math.abs(dw) < .3 && Math.abs(dh) < .3 && Math.abs(dr) < .5) {
+          raf = null;
+          return;
+        }
+        raf = requestAnimationFrame(tick);
+      }
+
+      function kick() { if (raf === null) raf = requestAnimationFrame(tick); }
+
+      tick();   // place the ring once at its starting position
+
+      // Press feedback.
+      addEventListener('pointerdown', () => { dot.classList.add('press'); ring.classList.add('press'); kick(); });
+      addEventListener('pointerup', () => { dot.classList.remove('press'); ring.classList.remove('press'); kick(); });
+
+      // Fade both out when the pointer leaves the window.
+      document.addEventListener('pointerleave', () => { dot.classList.add('hide'); ring.classList.add('hide'); });
+      document.addEventListener('pointerenter', () => { dot.classList.remove('hide'); ring.classList.remove('hide'); });
+
+      // Release the ring on scroll: the element it wrapped has moved, and
+      // without this the ring would hang in empty space until the next
+      // pointer movement.
+      addEventListener('scroll', () => {
+        if (snapped) {
+          snapped = false;
+          tx = mx; ty = my;
+          tw = th = 36;
+          tr = 999;
+          ring.classList.remove('snapped');
+          kick();
+        }
+      }, { passive: true });
+    }
+
+
+    /* ---- Active nav link ------------------------------------------------
+       Underlines the nav link for whichever section is in view. The
+       rootMargin shrinks the detection band to roughly the middle 5% of
+       the screen, so the highlight changes as a section passes the centre
+       rather than the moment it peeks in at the bottom. */
+
+    /* Scoped to the link list on purpose. A broader "header nav a" also
+       matches the logo (href="#top") and the header CTA (the DM link),
+       neither of which is a section link — and because both sit outside
+       the list, measuring one places the indicator outside it too. */
+    const navLinks = [...document.querySelectorAll('#navLinks a[href^="#"]')];
+
+    // "services" -> the <a> pointing at #services
+    const sectionFor = new Map(navLinks.map(a => [a.getAttribute('href').slice(1), a]));
+
+    /* The indicator. One bar is moved and resized to sit under whichever
+       link is current, which reads as a single object travelling rather
+       than four separate underlines fading in and out. */
+    const navPill = document.getElementById('navPill');
+    let activeLink = null;
+
+    function movePill(a) {
+      if (!navPill || !a) return;
+      /* offsetParent is null while the desktop nav is hidden behind the
+         hamburger. Hide the bar rather than returning quietly: Tailwind
+         arrives from a CDN, so for a moment on load the nav is unstyled
+         and visible, and a measurement taken then would otherwise stick
+         around as a stale inline width. */
+      if (!a.offsetParent) { navPill.style.opacity = 0; return; }
+      const r = a.getBoundingClientRect(),
+            u = navPill.parentElement.getBoundingClientRect();
+      navPill.style.width = r.width + 'px';
+      navPill.style.transform = 'translateX(' + (r.left - u.left) + 'px)';
+      navPill.style.opacity = 1;
+    }
+
+    // Hovering previews where the bar would go; leaving returns it.
+    navLinks.forEach(a => {
+      a.addEventListener('pointerenter', () => movePill(a));
+      a.addEventListener('focus', () => movePill(a));
+    });
+    const navList = navPill && navPill.parentElement;
+    if (navList) {
+      navList.addEventListener('pointerleave', () => movePill(activeLink));
+    }
+
+    // Re-measure when the layout changes; widths shift with the viewport.
+    addEventListener('resize', () => movePill(activeLink), { passive: true });
+
+    const sio = new IntersectionObserver(es => es.forEach(e => {
+      const a = sectionFor.get(e.target.id);
+      if (!a) return;
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        a.classList.add('active');
+        activeLink = a;
+        movePill(a);
+      }
+    }), { rootMargin: '-45% 0px -50% 0px' });
+
+    // Only observe links that point at a section that actually exists.
+    [...sectionFor.keys()].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) sio.observe(el);
+    });
+
+
+    /* ---- Click ripple ---------------------------------------------------
+       An expanding circle at every click. Each one removes itself when its
+       animation ends, so they never accumulate in the DOM. */
+
+    if (!REDUCED) addEventListener('pointerdown', e => {
+      const r = document.createElement('span');
+      r.className = 'ripple';
+      r.style.left = e.clientX + 'px';
+      r.style.top = e.clientY + 'px';
+      document.body.appendChild(r);
+      r.addEventListener('animationend', () => r.remove());
+    }, { passive: true });
+
+
+    /* ---- Magnetic buttons -----------------------------------------------
+       Primary buttons lean toward the pointer. Vertical pull (.3) is
+       stronger than horizontal (.22) because the buttons are wider than
+       they are tall, which keeps the movement feeling even. */
+
+    /* Same treatment as the tilt: measured once per hover (measuring the
+       button while it is being pulled made it chase its own offset), one
+       write per frame, and a short transition while held. */
+    if (FINE && !REDUCED) document.querySelectorAll('.btn-primary').forEach(b => {
+      let r = null, ry = -1, mx = 0, my = 0, raf = null;
+      function paint() {
+        raf = null;
+        if (!r) return;
+        b.style.transform = `translate(${((mx - r.left - r.width / 2) * .22).toFixed(1)}px, ${((my - r.top - r.height / 2) * .3).toFixed(1)}px) scale(1.03)`;
+      }
+      b.addEventListener('pointerenter', () => { r = null; b.classList.add('mag'); });
+      b.addEventListener('pointermove', e => {
+        if (!r || ry !== scrollY) { r = b.getBoundingClientRect(); ry = scrollY; }
+        mx = e.clientX; my = e.clientY;
+        if (raf === null) raf = requestAnimationFrame(paint);
+      }, { passive: true });
+      b.addEventListener('pointerleave', () => {
+        if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+        b.classList.remove('mag');
+        b.style.transform = '';
+      });
+    });
+
+
+    /* ---- Counting numbers -----------------------------------------------
+       Counts up to data-count when the figure scrolls into view, then
+       appends data-suffix. Each element is unobserved immediately so it
+       counts once, not every time it re-enters the screen.
+
+       The 1-(1-p)^4 curve starts fast and eases out hard, so the number
+       slows noticeably as it lands rather than stopping dead. 3000ms is
+       deliberately unhurried — the figures are the proof on this page and
+       are meant to be watched. */
+
+    const cio = new IntersectionObserver(es => es.forEach(e => {
+      const el = e.target;
+
+      /* Scrolling away re-arms the counter, so it climbs again the next
+         time it comes back on screen rather than counting once per page
+         load. The element is never unobserved, and the "running" flag
+         stops a second pass starting while the first is still going. */
+      if (!e.isIntersecting) { el.dataset.running = ''; return; }
+      if (el.dataset.running) return;
+      el.dataset.running = '1';
+
+      const end = +el.dataset.count,           // unary + converts to number
+            suf = el.dataset.suffix || '',
+            t0 = performance.now();
+
+      // A number spinning through three thousand milliseconds is motion
+      // like any other, so reduced-motion visitors get the final figure
+      // immediately rather than a blur of changing digits.
+      if (REDUCED) { el.textContent = end + suf; return; }
+
+
+      (function tick(t) {
+        const p = Math.min((t - t0) / 3000, 1);          // 0 -> 1 progress
+        el.textContent = Math.round(end * (1 - Math.pow(1 - p, 4))) + suf;
+        if (p < 1) requestAnimationFrame(tick);
+        // Leave the flag set: it clears when the figure scrolls away, so
+        // a counter sitting on screen does not restart on every frame.
+      })(t0);
+    }), { threshold: .5 });   // wait until the figure is half visible
+
+    document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
+
+
+
+    /* ---- FAQ accordion --------------------------------------------------
+       Toggles .open on the row, which drives the CSS grid-row animation,
+       and keeps aria-expanded in step for screen readers. Rows open
+       independently — opening one does not close the others. */
+
+    document.querySelectorAll('.faq > button').forEach(btn => btn.addEventListener('click', () => {
+      const f = btn.parentElement,
+            open = f.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+    }));
+
+
+
+    /* ---- Scroll-driven statement -----------------------------------------
+       Splits the positioning line into words and lights them progressively
+       as the block crosses the middle of the screen. Words named in
+       data-key are painted in the brand colour instead.
+
+       Progress is recomputed on scroll inside the existing rAF-throttled
+       handler (see onScroll), not on its own listener. */
+
+    const hlLine = document.getElementById('hlLine');
+    let hlWords = [];
+    let hlLit = -1;      // how many words are currently lit
+
+    if (hlLine) {
+      const keys = (hlLine.dataset.key || '').split(',').map(k => k.trim()).filter(Boolean);
+      const words = hlLine.textContent.split(/(\s+)/);
+      hlLine.textContent = '';
+
+      words.forEach(part => {
+        if (!part.trim()) { hlLine.appendChild(document.createTextNode(part)); return; }
+        const sp = document.createElement('span');
+        sp.className = 'hl-w' + (keys.includes(part) ? ' key' : '');
+        sp.textContent = part;
+        hlLine.appendChild(sp);
+        hlWords.push(sp);
+      });
+
+      // Reduced motion: no scrubbing, just show the finished sentence.
+      if (REDUCED) hlWords.forEach(w => w.classList.add('lit'));
+    }
+
+    function paintStatement() {
+      if (!hlLine || REDUCED || !hlWords.length || !hlGeo) return;
+      const top = hlGeo.top - scrollY;          // cached, no layout read
+      // 0 when the block's top reaches 85% down the screen, 1 by the time
+      // it has travelled to 35%. Clamped so it never overshoots.
+      const p = Math.min(Math.max((innerHeight * .85 - top) / (innerHeight * .5), 0), 1);
+      const lit = Math.round(p * hlWords.length);
+      // Re-applying the same classes every frame is wasted style work;
+      // only touch the DOM when the boundary actually moves.
+      if (lit === hlLit) return;
+      hlLit = lit;
+      hlWords.forEach((w, i) => w.classList.toggle('lit', i < lit));
+    }
+
+
+    /* ---- Process rail ----------------------------------------------------
+       Fills the line behind the four steps as they scroll past, and lights
+       each dot as it is reached. Horizontal from 768px up, vertical below,
+       so the fill is written to whichever axis is in play. */
+
+    const rail = document.getElementById('rail');
+    const railFill = rail && rail.querySelector('.rail-fill');
+    const railSteps = rail ? [...rail.querySelectorAll('.rail-step')] : [];
+
+    function paintRail() {
+      if (!rail || !railFill || !railGeo) return;
+
+      const horizontal = wide.matches;          // cached MediaQueryList
+      const top = railGeo.top - scrollY;        // cached, no layout read
+
+      // Same scrub window as the statement: starts low on the screen,
+      // completes as the block reaches the upper third.
+      const p = Math.min(Math.max((innerHeight * .8 - top) / (railGeo.height + innerHeight * .25), 0), 1);
+
+      railFill.style.transform = (horizontal ? 'scaleX(' : 'scaleY(') + p.toFixed(4) + ')';
+
+      // Light a dot once the fill has passed it.
+      const reached = Math.ceil(p * railSteps.length);
+      railSteps.forEach((st, i) => st.classList.toggle('on', i < reached));
+    }
+
+
+    /* ---- Marquee follows the scroll ----------------------------------------
+       Scrolling speeds the strip up in proportion to how fast the page is
+       moving, scrolling back up reverses it, and it leans a few degrees
+       into the motion. It eases back to cruising speed when the page
+       stops. The CSS animations are steered through their playbackRate,
+       so nothing is restarted or re-laid-out, and the loop stops itself
+       once everything has settled. */
+    const mqWrap = document.querySelector('.mq');
+    let mqAnims = null, mqVel = 0, mqRate = 1, mqDir = 1, mqRaf = null;
+
+    function feedMarquee(dy) {
+      if (!mqWrap || !dy) return;
+      mqVel = Math.max(-60, Math.min(60, dy));      // px moved this frame
+      mqDir = dy > 0 ? 1 : -1;
+      if (mqRaf === null) mqRaf = requestAnimationFrame(mqTick);
+    }
+
+    function mqTick() {
+      if (!mqAnims || mqAnims.some(a => a.playState === 'idle')) {
+        mqAnims = [...mqWrap.querySelectorAll('.mq-row')].map(r => r.getAnimations()[0]).filter(Boolean);
+      }
+      const target = mqDir * (1 + Math.abs(mqVel) * .16);
+      mqRate += (target - mqRate) * .1;
+      mqVel *= .88;
+      mqAnims.forEach(a => a.playbackRate = mqRate);
+      const lean = -mqVel * .12;
+      mqWrap.style.transform = Math.abs(lean) > .05 ? 'skewX(' + lean.toFixed(2) + 'deg)' : '';
+      if (Math.abs(target - mqRate) < .01 && Math.abs(mqVel) < .1) {
+        mqRate = mqDir;
+        mqAnims.forEach(a => a.playbackRate = mqRate);
+        mqWrap.style.transform = '';
+        mqRaf = null;
+        return;
+      }
+      mqRaf = requestAnimationFrame(mqTick);
+    }
+
+    /* ---- Hero scroll-out ---------------------------------------------------
+       The hero's content drifts down at a third of the scroll speed and
+       fades as you leave it, so the next section slides up over it. Once
+       the hero is fully off screen it is written once and then left
+       alone. */
+    function paintHero(y) {
+      if (!heroInner || !heroH) return;
+      if (y >= heroH) {
+        if (!heroOff) { heroOff = true; heroInner.style.opacity = 0; }
+        return;
+      }
+      heroOff = false;
+      if (y <= 0) { heroInner.style.transform = ''; heroInner.style.opacity = ''; return; }
+      const k = y / heroH;
+      heroInner.style.transform = 'translate3d(0,' + (y * .3).toFixed(1) + 'px,0) scale(' + (1 - k * .05).toFixed(4) + ')';
+      heroInner.style.opacity = Math.max(0, 1 - k * 1.2).toFixed(3);
+    }
+
+    /* ---- Closing wordmark ----------------------------------------------------
+       Split into letters that rise in one after another when it scrolls
+       into view. The staggered delays are cleared once they have played,
+       so the hover lift on each letter answers instantly. */
+    const bm = document.querySelector('.brandmark');
+    if (bm && !REDUCED) {
+      const letters = [];
+      (function split(node) {
+        [...node.childNodes].forEach(n => {
+          if (n.nodeType === 3) {
+            const frag = document.createDocumentFragment();
+            [...n.textContent].forEach(ch => {
+              const s = document.createElement('span');
+              s.className = 'bm-l';
+              s.textContent = ch;
+              frag.appendChild(s);
+              letters.push(s);
+            });
+            n.replaceWith(frag);
+          } else if (n.nodeType === 1) {
+            split(n);
+          }
+        });
+      })(bm);
+      letters.forEach((l, i) => l.style.transitionDelay = (i * 60) + 'ms');
+      bm.classList.add('bm-ready');
+      const bio = new IntersectionObserver(es => es.forEach(e => {
+        if (!e.isIntersecting) return;
+        bm.classList.add('in');
+        bio.disconnect();
+        setTimeout(() => letters.forEach(l => l.style.transitionDelay = ''), 600 + letters.length * 60 + 900);
+      }), { threshold: .3 });
+      bio.observe(bm);
+    }
+
+    /* ---- Smooth wheel scrolling --------------------------------------------
+       Lenis turns the mouse wheel's notched jumps into one continuous
+       glide. Desktop pointers only: touch scrolling is already smooth and
+       native momentum is what phone users expect. Off under reduced
+       motion. Anchor links glide too, landing 104px below the top to clear
+       the nav — the same offset scroll-margin-top gives native jumps.
+
+       The animation loop only runs while there is scrolling to animate
+       and stops half a second after it settles, so a still page costs
+       nothing. Lenis measures time between frames, so its clock is reset
+       when the loop restarts — otherwise the first frame after a pause
+       would see a gap of seconds and jump straight to the target. */
+    const SMOOTH_SCROLL = true;
+    let lenis = null;
+    if (SMOOTH_SCROLL && FINE && !REDUCED && window.Lenis) {
+      lenis = new Lenis({ lerp: .1, wheelMultiplier: 1 });
+      let lraf = null, idle = 0;
+      const lloop = t => {
+        lenis.raf(t);
+        if (lenis.isScrolling) idle = 0;
+        else if (++idle > 30) { lraf = null; return; }
+        lraf = requestAnimationFrame(lloop);
+      };
+      const lkick = () => {
+        idle = 0;
+        if (lraf === null) { lenis.time = performance.now(); lraf = requestAnimationFrame(lloop); }
+      };
+      addEventListener('wheel', lkick, { passive: true });
+
+      /* In-page links. Handled here rather than by Lenis's own anchor
+         option, which neither cancels the browser's instant jump (so the
+         two fight) nor survives a bare "#" href. Keyboard users get focus
+         moved to the section, as a native jump would do. */
+      document.addEventListener('click', e => {
+        const a = e.target.closest('a[href^="#"]');
+        const id = a && a.getAttribute('href');
+        if (!id || id.length < 2) return;
+        const el = document.getElementById(id.slice(1));
+        if (!el) return;
+        e.preventDefault();
+        lkick();
+        lenis.scrollTo(el, { offset: -104 });
+        try { history.pushState(null, '', id); } catch (err) {}
+        if (e.detail === 0) {            // activated from the keyboard
+          if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+          el.focus({ preventScroll: true });
+        }
+      });
+      lkick();
+    }
+
+    /* ---- Final paint ------------------------------------------------------
+       Everything the scroll handler touches now exists, so release the
+       flag and run it once. This also sets the correct state for a page
+       loaded part-way down, or restored mid-scroll by the browser. */
+    extrasReady = true;
+    measurePage();   // re-measure now that every section is in the DOM
+    onScroll();
+
+    // Place the indicator under whichever link the first paint made
+    // current. Deferred one frame so the nav has its final layout.
+    requestAnimationFrame(() => movePill(activeLink));
+
+  </script>
+</body>
+</html>
